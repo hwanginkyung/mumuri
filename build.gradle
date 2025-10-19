@@ -41,6 +41,8 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.25.25'
 	implementation 'software.amazon.awssdk:auth'
 	implementation 'com.h2database:h2'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'io.micrometer:micrometer-registry-prometheus'
 }
 
 tasks.named('test') {

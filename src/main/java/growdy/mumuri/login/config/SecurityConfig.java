@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**","/v3/api-docs/**","/swagger-ui/**","/my",
+                        .requestMatchers("/api/auth/**","/v3/api-docs/**","/swagger-ui/**","/actuator/prometheus",
                                 "/swagger-ui.html","/api/auth/kakao/**", "/login/**", "/css/**", "/js/**","/login").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -45,7 +45,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
         //config.setAllowedOrigins(List.of("*"));
-        config.setAllowedOrigins(List.of("https://auth.expo.io","http://localhost:3000","http://localhost:8080","https://*.ngrok-free.app"));
+        config.setAllowedOrigins(List.of("https://auth.expo.io","http://localhost:9090","http://localhost:3000","http://localhost:8080","https://*.ngrok-free.app"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

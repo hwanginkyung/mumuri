@@ -14,7 +14,7 @@ build/
 .springBeans
 .sts4-cache
 .env
-!**/src/main/resources/appication.yml
+/src/main/resources/appication.yml
 
 bin/
 !**/src/main/**/bin/

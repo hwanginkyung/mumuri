@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Entity
 @Getter
@@ -27,11 +26,9 @@ public class Member extends BaseEntity{
     private String status = "solo";
     private String password;
     @OneToOne(mappedBy = "member1")
-    private Couple couple1;
-    @OneToOne(mappedBy = "member2")
-    private Couple couple2;
+    private Couple couple;
     private String coupleCode;
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
-    private List<Photo> photos;
+/*    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
+    private List<Photo> photos;*/
 
 }

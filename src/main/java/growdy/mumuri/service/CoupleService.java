@@ -54,49 +54,5 @@ public class CoupleService {
         coupleMember.setCoupleCode(coupleCode);
     }
 
-    @Transactional
-    public void uploadPhoto(Long memId, MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
-        }
-        Couple couple = coupleRepository.findByMember1IdOrMember2Id(memId,memId)
-                .orElseThrow(() -> new IllegalArgumentException("Couple not found"));;
-        Long coupleId= couple.getId();
-        Member member = memberRepository.findById(memId)
-                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
-        // 확장자 추출
-        String originalFilename = file.getOriginalFilename();
-        String extension = (originalFilename != null && originalFilename.contains("."))
-                ? originalFilename.substring(originalFilename.lastIndexOf("."))
-                : ".jpg";
-        String filename = UUID.randomUUID() + extension;
-
-        // ContentType
-        String contentType = file.getContentType();
-        if (contentType == null) {
-            contentType = "application/octet-stream";
-        }
-
-        // 업로드 경로 (날짜별 관리)
-        String path = String.format("uploads/couple/%d/photos/%s/%s",
-                coupleId,
-                LocalDate.now(),
-                filename);
-        String path2 =String.format("uploads/member/%d/photos/%s/%s",
-                memId,
-                LocalDate.now(),
-                filename);
-        String s3Url = s3Upload.upload(file, path, contentType);
-        String s3Url2 = s3Upload.upload(file, path2, contentType);
-
-        CouplePhoto photo = new CouplePhoto();
-        photo.setPhotoUrl(s3Url);
-        photo.setCouple(couple);
-        Photo photo2 = new Photo();
-        photo2.setPhotoUrl(s3Url2);
-        photo2.setMember(member);
-        couplePhotoRepository.save(photo);
-        photoRepository.save(photo2);
-    }
 
 }
