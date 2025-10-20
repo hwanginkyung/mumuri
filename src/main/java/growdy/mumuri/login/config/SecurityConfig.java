@@ -30,7 +30,7 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**","/v3/api-docs/**","/swagger-ui/**","/actuator/prometheus",
+                        .requestMatchers("/h2-console/**","/api/auth/**","/v3/api-docs/**","/swagger-ui/**","/actuator/prometheus",
                                 "/swagger-ui.html","/api/auth/kakao/**", "/login/**", "/css/**", "/js/**","/login").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -38,7 +38,6 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-
         return http.build();
     }
     @Bean

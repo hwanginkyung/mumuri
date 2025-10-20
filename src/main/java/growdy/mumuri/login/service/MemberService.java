@@ -18,20 +18,25 @@ public class MemberService {
     private final MemberRepository memberRepository;
 
     public Member registerIfAbsent(KakaoUserInfo userInfo) {
-        Long ids = Long.valueOf(userInfo.id());
-        Optional<Member> existingUser = memberRepository.findById(ids);
-        System.out.println("조회된 사용자: " + existingUser);
-        int atIndex = userInfo.email().indexOf("@");
-        String spotNickname = (atIndex != -1) ? userInfo.email().substring(0, atIndex) : userInfo.email();
-        return memberRepository.findById(ids)
-                .orElseGet(() -> {
-                    Member newUser = new Member();
-                    newUser.setEmail(userInfo.email());
-                    newUser.setNickname(userInfo.nickname());
-                    Member saved = memberRepository.save(newUser);
-                    System.out.println("새 회원 저장됨: " + saved);
-                    return saved;
-                });
+        Long kakaoId = Long.valueOf(userInfo.id());
+
+        // 1️⃣ 카카오 ID로 먼저 회원 조회
+        Optional<Member> existingUser = memberRepository.findByKakaoId(kakaoId);
+        if (existingUser.isPresent()) {
+            System.out.println("기존 사용자 로그인: " + existingUser.get());
+            return existingUser.get();
+        }
+
+        // 2️⃣ 신규 회원 등록
+        Member newUser = new Member();
+        newUser.setKakaoId(kakaoId);
+        newUser.setEmail(userInfo.email());
+        newUser.setNickname(userInfo.nickname());
+        newUser.setStatus("solo");
+
+        Member saved = memberRepository.save(newUser);
+        System.out.println("새 회원 저장됨: " + saved);
+        return saved;
     }
     public void setCoupleCode(Long userId){
         Member member = memberRepository.findById(userId).orElse(null);

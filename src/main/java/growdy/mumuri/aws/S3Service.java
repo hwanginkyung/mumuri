@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class S3Service {
     private final S3Client s3Client;
-    private final String bucketName = "mumuritest";
+    private final String bucketName = "mumuri";
     public List<String> getImageKeysInFolder(String folder) {
         ListObjectsV2Request request = ListObjectsV2Request.builder()
                 .bucket(bucketName)

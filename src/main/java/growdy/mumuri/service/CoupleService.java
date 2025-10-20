@@ -53,6 +53,16 @@ public class CoupleService {
         user.setCoupleCode(coupleCode);
         coupleMember.setCoupleCode(coupleCode);
     }
-
+    @Transactional
+    public Couple test(Member user){
+        // Couple 생성
+        Member member = new Member();
+        member.setId(user.getId());
+        Couple couple = new Couple();
+        couple.setMember1(member);
+        couple.setMember2(user);
+        coupleRepository.save(couple);
+        return couple;
+    }
 
 }

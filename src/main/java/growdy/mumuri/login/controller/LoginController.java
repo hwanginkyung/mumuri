@@ -86,10 +86,10 @@ public class LoginController {
         // JWT 발급
         String token = jwtUtil.createToken(member.getId());
 
-        //String email = member.getEmail();       // 한글 가능
+        String email = member.getEmail();       // 한글 가능
         String nickname = member.getNickname(); // 한글 가능
 
-        //String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8);
+        String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8);
         String encodedNickname = URLEncoder.encode(nickname, StandardCharsets.UTF_8);
         System.out.println(token);
         URI deeplink = UriComponentsBuilder
@@ -97,7 +97,7 @@ public class LoginController {
                 .scheme("mumuri")
                 .path("oauth/kakao")   // path는 맨 앞 / 없이
                 .queryParam("token", token)
-                //.queryParam("email", encodedEmail)
+                .queryParam("email", encodedEmail)
                 .queryParam("nickname", encodedNickname)
                 .queryParam("status", member.getStatus())
                 .build(true)           // 쿼리 파라미터까지 인코딩 보장
