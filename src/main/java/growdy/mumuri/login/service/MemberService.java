@@ -38,7 +38,7 @@ public class MemberService {
         System.out.println("새 회원 저장됨: " + saved);
         return saved;
     }
-    public void setCoupleCode(Long userId){
+    public void makeCoupleCode(Long userId){
         Member member = memberRepository.findById(userId).orElse(null);
         String code;
         do {

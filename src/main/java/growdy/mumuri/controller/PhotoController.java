@@ -1,5 +1,6 @@
 package growdy.mumuri.controller;
 
+import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.PhotoResponseDto;
@@ -58,6 +59,21 @@ public class PhotoController {
     public long test(@AuthenticationPrincipal CustomUserDetails user){
         Couple couple = coupleService.test(user.getUser());
         log.info("couple_id :{}", couple.getId());
+        log.info("user_id : {}",user.getId());
         return couple.getId();
     }
+    @PostMapping("/test/already")
+    public long testAlready(@AuthenticationPrincipal CustomUserDetails user){
+        Couple couple = coupleService.test(user.getUser());
+        log.info("couple_id :{}", couple.getId());
+        log.info("user_id : {}",user.getId());
+        return couple.getId();
+    }
+    @PostMapping("/test/go")
+    public String testGo(@AuthenticationPrincipal CustomUserDetails user){
+        String code= coupleService.newcode(user.getUser());
+        log.info("user_id : {}",user.getId());
+        return code;
+    }
+
 }

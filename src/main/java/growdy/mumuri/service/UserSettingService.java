@@ -2,6 +2,7 @@ package growdy.mumuri.service;
 
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.login.repository.MemberRepository;
+import growdy.mumuri.login.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,7 +13,7 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class UserSettingService {
     private MemberRepository memberRepository;
-
+    private MemberService memberService;
     @Transactional
     public void updateMemberName(Long memberId, String name) {
         Member member = memberRepository.findById(memberId)
@@ -30,6 +31,7 @@ public class UserSettingService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
         member.setAnniversary(anniversary);
+        memberService.makeCoupleCode(memberId);
     }
 
 }

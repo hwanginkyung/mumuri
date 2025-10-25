@@ -2,7 +2,6 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.login.CustomUserDetails;
-import growdy.mumuri.login.dto.CoupleCodeDto;
 import growdy.mumuri.login.dto.CoupleMatchDto;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.login.service.MemberService;
@@ -11,10 +10,7 @@ import growdy.mumuri.service.UserSettingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
@@ -42,23 +38,22 @@ public class UserController {
         return ResponseEntity.ok("Birthday updated successfully");
     }
     @PostMapping("/anniversary")
-    public ResponseEntity<String> UpdateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
+    public String UpdateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
                                                  @RequestParam LocalDate anniversary) {
         Long memberId= user.getId();
-        userSettingService.updateMemberBirthday(memberId, anniversary);
-        return ResponseEntity.ok("Anniversary updated successfully");
+        Member member = memberRepository.findById(user.getId()).orElse(null);
+        userSettingService.updateMemberAnniversary(memberId, anniversary);
+        memberService.makeCoupleCode(memberId);
+        return member.getCoupleCode();
     }
     @PostMapping("/couple")
-    public ResponseEntity<CoupleMatchDto> CheckCouple(@AuthenticationPrincipal CustomUserDetails user,
+    public ResponseEntity<CoupleMatchDto> MakeCouple(@AuthenticationPrincipal CustomUserDetails user,
                                                       @RequestParam String coupleCode) {
         coupleService.checkAndSetCouple(user.getId(), coupleCode);
         return ResponseEntity.ok(new CoupleMatchDto("Couple matched successfully", user.getUsername()));
     }
-    @PostMapping("/getCode")
-    public ResponseEntity<CoupleCodeDto> getCoupleCode(@AuthenticationPrincipal CustomUserDetails user){
-        memberService.setCoupleCode(user.getId());
-        Member member = memberRepository.findById(user.getId()).orElse(null);
-        return ResponseEntity.ok(new CoupleCodeDto ("Couple code set successfully", member.getCoupleCode()));
+    @GetMapping("/couple/already")
+    public ResponseEntity<String> CheckCouple(@AuthenticationPrincipal CustomUserDetails user) {
+        return ResponseEntity.ok(coupleService.check(user.getUser()));
     }
-
 }

@@ -7,6 +7,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 
@@ -47,4 +48,11 @@ public class JwtUtil {
         }
     }
 
+    public Long extractUserId(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
+                .parseClaimsJws(token)
+                .getBody();
+        return Long.parseLong(claims.getSubject()); // sub에 userId를 넣어둔 경우
+    }
 }
