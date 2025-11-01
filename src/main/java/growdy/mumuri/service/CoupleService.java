@@ -69,6 +69,7 @@ public class CoupleService {
         chatRoomRepository.save(chatRoom);
         return couple;
     }
+    @Transactional
     public String newcode (Member user){
         // 미리 등록
         Member member = new Member();

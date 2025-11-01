@@ -12,8 +12,8 @@ import java.time.LocalDate;
 @Service
 @RequiredArgsConstructor
 public class UserSettingService {
-    private MemberRepository memberRepository;
-    private MemberService memberService;
+    private final MemberRepository memberRepository;
+    private final MemberService memberService;
     @Transactional
     public void updateMemberName(Long memberId, String name) {
         Member member = memberRepository.findById(memberId)

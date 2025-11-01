@@ -1,10 +1,6 @@
 package growdy.mumuri.controller;
-
-import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
-import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.PhotoResponseDto;
-import growdy.mumuri.dto.TestDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.CoupleService;
 import growdy.mumuri.service.PhotoService;
@@ -14,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.List;
 @Slf4j
 @RestController

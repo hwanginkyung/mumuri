@@ -9,5 +9,5 @@ import lombok.Setter;
 @AllArgsConstructor
 public class CoupleMatchDto {
     private String message;
-    private String memberName;
+    private Long memberName;
 }
