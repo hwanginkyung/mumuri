@@ -50,7 +50,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         //
         // config.setAllowedOrigins(List.of("*"));
-        config.setAllowedOriginPatterns(List.of("https://auth.expo.io","http://localhost:9090","http://localhost:3000","http://localhost:8080","https://*.ngrok-free.app"));
+        config.setAllowedOriginPatterns(List.of("https://auth.expo.io","http://localhost:9090","http://mumuri.shop","http://localhost:8080","https://mumuri.shop"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
