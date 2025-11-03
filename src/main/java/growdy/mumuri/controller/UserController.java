@@ -33,7 +33,7 @@ public class UserController {
                                @RequestParam String name) {
         Long memberId= user.getId();
         userSettingService.updateMemberName(memberId, name);
-        return ResponseEntity.ok("Name updated successfully");
+        return ResponseEntity.ok(name);
     }
 
     @PostMapping("/birthday")
@@ -41,7 +41,7 @@ public class UserController {
                                                  @RequestParam LocalDate birthday) {
         Long memberId= user.getId();
         userSettingService.updateMemberBirthday(memberId, birthday);
-        return ResponseEntity.ok("Birthday updated successfully");
+        return ResponseEntity.ok(birthday.toString());
     }
     @PostMapping("/anniversary")
     public ResponseEntity<String> UpdateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
