@@ -34,6 +34,7 @@ public class CoupleService {
         couple.setMember1(user);
         couple.setMember2(coupleMember);
         couple.setCoupleCode(coupleCode);
+        couple.setAnniversary(user.getAnniversary());
         coupleRepository.save(couple);
         ChatRoom chatRoom = new ChatRoom(couple);
         chatRoomRepository.save(chatRoom);
@@ -61,6 +62,7 @@ public class CoupleService {
         member.setCoupleCode(user.getCoupleCode());
         user.setStatus("couple");
         Couple couple = new Couple();
+        couple.setAnniversary(user.getAnniversary());
         couple.setMember1(member);
         couple.setMember2(user);
         couple.setCoupleCode(user.getCoupleCode());
