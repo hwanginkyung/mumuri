@@ -6,7 +6,10 @@ import growdy.mumuri.repository.MissionRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -21,7 +24,8 @@ public class MissionCsvImporter {
 
     private final MissionRepository missionRepository;
 
-    @PostConstruct
+    @Transactional
+    @EventListener(ApplicationReadyEvent.class)
     public void importMissionsFromCsv() {
         Path csvPath = Path.of("/home/ubuntu/missions_converted.csv");
         log.info("🚀 Importing missions from: {}", csvPath);
