@@ -5,6 +5,7 @@ import growdy.mumuri.domain.MissionDifficulty;
 import growdy.mumuri.repository.MissionRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -15,29 +16,36 @@ import java.util.List;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class MissionCsvImporter {
 
     private final MissionRepository missionRepository;
 
     @PostConstruct
-    public void importMissionsFromCsv() throws Exception {
-        // ✅ 이미 데이터가 있으면 다시 실행 안 함
+    public void importMissionsFromCsv() {
+        Path csvPath = Path.of("/home/ubuntu/missions_converted.csv");
+        log.info("🚀 Importing missions from: {}", csvPath);
+
         if (missionRepository.count() > 0) {
-            System.out.println("✅ Missions already exist, skipping import.");
+            log.info("✅ Missions already exist, skipping import.");
             return;
         }
 
-        Path csvPath = Path.of("/home/ubuntu/missions.csv");
-        System.out.println("🚀 Importing missions from: " + csvPath);
+        List<Mission> missions = new ArrayList<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(csvPath.toFile()))) {
             br.readLine(); // header skip
             String line;
-            List<Mission> missions = new ArrayList<>();
+            int lineCount = 0;
 
             while ((line = br.readLine()) != null) {
+                lineCount++;
                 String[] cols = line.split(",");
-                if (cols.length < 3) continue;
+
+                if (cols.length < 3) {
+                    log.warn("⚠️ Skipping invalid line #{}: {}", lineCount, line);
+                    continue;
+                }
 
                 String title = cols[0].trim();
                 String category = cols[1].trim();
@@ -47,19 +55,23 @@ public class MissionCsvImporter {
                 try {
                     difficulty = MissionDifficulty.valueOf(difficultyStr);
                 } catch (Exception e) {
+                    log.warn("⚠️ Unknown difficulty '{}' in line #{} -> default NORMAL", difficultyStr, lineCount);
                     difficulty = MissionDifficulty.NORMAL;
                 }
 
-                Mission m = new Mission();
-                m.setTitle(title);
-                m.setCategory(category);
-                m.setDifficulty(difficulty);
-                m.setActive(true);
-                missions.add(m);
+                Mission mission = new Mission();
+                mission.setTitle(title);
+                mission.setCategory(category);
+                mission.setDifficulty(difficulty);
+                mission.setActive(true);
+                missions.add(mission);
             }
 
             missionRepository.saveAll(missions);
-            System.out.println("✅ Imported " + missions.size() + " missions successfully!");
+            log.info("✅ Imported {} missions successfully!", missions.size());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to import missions from CSV: {}", e.getMessage(), e);
         }
     }
 }
