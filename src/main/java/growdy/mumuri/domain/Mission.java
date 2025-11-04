@@ -21,6 +21,7 @@ public class Mission extends BaseEntity{
     @Lob
     private String description;
 
+    private String category;
     @Column(nullable=false)
     private int reward = 0;
 
