@@ -23,7 +23,8 @@ public class PhotoController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails user
             ){
-        photoService.uploadPhoto(couple_id, file, user.getId());
+        Long test=(long) -1 ;
+        photoService.uploadPhoto(couple_id, file, user.getId(),test);
         return ResponseEntity.ok("photo updated successfully");
     }
     @GetMapping("/photo/{couple_id}/{photo_id}")

@@ -21,11 +21,18 @@ public class PhotoService {
     private final CoupleRepository coupleRepository;
     private final PhotoRepository photoRepository;
     private final S3Upload s3Upload;
-    public void uploadPhoto(Long coupleId, MultipartFile file, Long userId) {
-        String key = "couples/" + coupleId + "/photos/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
-        Couple couple = coupleRepository.findById(coupleId).orElse(null);
-        // S3 업로드 + S3 URL 생성
-        String s3Url= s3Upload.upload(file,key,"image/jpeg");
+    public String uploadPhoto(Long coupleId, MultipartFile file, Long userId,Long missionId) {
+        String key = null;
+        Couple couple = null;
+        String s3Url= null;
+        try {
+            key = "couples/" + coupleId + "/"+missionId+"/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            couple = coupleRepository.findById(coupleId).orElse(null);
+            // S3 업로드 + S3 URL 생성
+            s3Url = s3Upload.upload(file,key,"image/jpeg");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         // DB 저장
         Photo photo = Photo.builder()
                 .couple(couple)
@@ -34,6 +41,7 @@ public class PhotoService {
                 .uploadedBy(userId)
                 .build();
         photoRepository.save(photo);
+        return s3Url;
     }
     /** 사진 한장  (presigned URL 반환) */
     @Transactional(readOnly = true)
