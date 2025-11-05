@@ -27,7 +27,7 @@ public class MissionCsvImporter {
     @Transactional
     @EventListener(ApplicationReadyEvent.class)
     public void importMissionsFromCsv() {
-        Path csvPath = Path.of("/home/ubuntu/missions_converted.csv");
+        Path csvPath = Path.of("/home/ubuntu/missions.csv");
         log.info("🚀 Importing missions from: {}", csvPath);
 
         if (missionRepository.count() > 0) {
