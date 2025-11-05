@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
+import growdy.mumuri.domain.Test;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.CoupleMatchDto;
 import growdy.mumuri.login.repository.MemberRepository;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -27,6 +29,15 @@ public class UserController {
     private final MemberService memberService;
     private final MemberRepository memberRepository;
     private final CoupleRepository coupleRepository;
+
+    @PostMapping("/test")
+    @Transactional
+    public void test(){
+        Test testss=new Test();
+        testss.setName("testss");
+
+
+    }
 
     @PostMapping("/name")
     public ResponseEntity<String> UpdateName(@AuthenticationPrincipal CustomUserDetails user,
