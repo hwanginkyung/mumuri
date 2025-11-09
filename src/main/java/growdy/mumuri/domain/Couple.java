@@ -27,7 +27,7 @@ public class Couple extends BaseEntity {
     /*@OneToMany(mappedBy = "couple", cascade = CascadeType.ALL)
     private List<CoupleChat> chats;*/
     @OneToMany(mappedBy = "couple", cascade = CascadeType.ALL)
-    private List<CoupleQuestion> questions;
+    private List<CoupleMission> questions;
 }
 
 

@@ -3,7 +3,6 @@ package growdy.mumuri.config;
 import growdy.mumuri.domain.Mission;
 import growdy.mumuri.domain.MissionDifficulty;
 import growdy.mumuri.repository.MissionRepository;
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;

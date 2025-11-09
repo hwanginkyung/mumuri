@@ -5,10 +5,16 @@ import growdy.mumuri.domain.*;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.login.service.MemberService;
 import growdy.mumuri.repository.ChatRoomRepository;
+import growdy.mumuri.repository.CoupleMissionRepository;
 import growdy.mumuri.repository.CoupleRepository;
+import growdy.mumuri.repository.MissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 
 
 @Service
@@ -19,6 +25,8 @@ public class CoupleService {
     private final CoupleRepository coupleRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final MemberService memberService;
+    private final MissionRepository missionRepository;
+    private final CoupleMissionRepository coupleMissionRepository;
 
     @Transactional
     public void checkAndSetCouple(Long userId, String coupleCode) {
@@ -43,6 +51,19 @@ public class CoupleService {
         coupleMember.setStatus("couple");
         user.setCoupleCode(coupleCode);
         coupleMember.setCoupleCode(coupleCode);
+        List<Mission> allMissions = missionRepository.findByActiveTrue();
+
+        Collections.shuffle(allMissions);
+        List<Mission> selected = allMissions.stream()
+                .limit(6)
+                .toList();
+
+        // 4️⃣ CoupleMission 엔티티 생성 후 저장
+        LocalDate today = LocalDate.now();
+        selected.forEach(m -> {
+            CoupleMission cm = new CoupleMission(couple, m, today);
+            coupleMissionRepository.save(cm);
+        });
     }
     public String check(Member user){
         Couple couple = user.getCouple();

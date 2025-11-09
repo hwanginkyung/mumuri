@@ -36,9 +36,12 @@ public class CoupleMission {
     @OneToMany(mappedBy = "coupleMission", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CoupleMissionProgress> progresses = new ArrayList<>();
 
+
+
     protected CoupleMission() {}
     public CoupleMission(Couple couple, Mission mission, LocalDate date) {
         this.couple = couple; this.mission = mission; this.missionDate = date;
+
     }
 
     public void updateStatusByProgress() {
