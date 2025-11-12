@@ -25,21 +25,31 @@ public class DatabaseInitializer {
     private final PhotoRepository photoRepository;
     @PersistenceContext
     private EntityManager em;
+
     @PostConstruct
     @Transactional
     public void resetDatabaseExceptMissions() {
         System.out.println("🧹 Initializing DB... Deleting all except mission table.");
-        em.createNativeQuery("SET FOREIGN_KEEY_CHECKS = 0").executeUpdate();
+
+        // 🚨 1️⃣ FK 체크 비활성화 (개발용)
+        em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
+
+        // 🚨 2️⃣ 참조 관계 순서대로 삭제 (하위 → 상위)
+        chatMessageRepository.deleteAll();
+        chatRoomRepository.deleteAll();
+
         coupleMissionProgressRepository.deleteAll();
         coupleMissionRepository.deleteAll();
         couplePhotoRepository.deleteAll();
-        coupleRepository.deleteAll();
-        memberRepository.deleteAll();
-        chatMessageRepository.deleteAll();
-        chatRoomRepository.deleteAll();
         missionScheduleRepository.deleteAll();
         photoRepository.deleteAll();
-        em.createNativeQuery("SET FOREIGN_KEEY_CHECKS = 1").executeUpdate();
+
+        coupleRepository.deleteAll();
+        memberRepository.deleteAll();
+
+        // 🚨 3️⃣ FK 체크 다시 활성화
+        em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
+
         System.out.println("✅ DB reset complete (missions preserved).");
     }
 }
