@@ -30,4 +30,6 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
           and cm.status = 'COMPLETED'
     """)
     Set<Long> findCompletedMissionIds(@Param("coupleId") Long coupleId);
+
+    List<CoupleMission> findByCoupleIdAndDate(Long coupleId, LocalDate date);
 }
