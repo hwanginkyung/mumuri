@@ -6,6 +6,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import growdy.mumuri.repository.*;
@@ -26,7 +28,7 @@ public class DatabaseInitializer {
     @PersistenceContext
     private EntityManager em;
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void resetDatabaseExceptMissions() {
         System.out.println("🧹 Initializing DB... Deleting all except mission table.");
