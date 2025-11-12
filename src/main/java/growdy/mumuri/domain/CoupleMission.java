@@ -13,7 +13,7 @@ import java.util.List;
 @Table(uniqueConstraints = @UniqueConstraint(name="uq_couple_mission_day", columnNames={"couple_id","mission_id","missionDate"}))
 @Getter
 @Setter
-public class CoupleMission {
+public class CoupleMission extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

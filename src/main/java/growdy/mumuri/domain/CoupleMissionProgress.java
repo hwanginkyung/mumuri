@@ -11,7 +11,7 @@ import java.time.Instant;
         uniqueConstraints = @UniqueConstraint(name="uq_progress_one_per_user", columnNames={"couple_mission_id","userId"}))
 @Getter
 @Setter
-public class CoupleMissionProgress {
+public class CoupleMissionProgress extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

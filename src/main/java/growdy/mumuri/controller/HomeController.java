@@ -31,7 +31,7 @@ public class HomeController {
         Couple couple= coupleRepository.findByMember1IdOrMember2Id(user.getId(),user.getId()).orElseThrow();
         long dday=dayService.getDday(couple.getId());
         LocalDate today = LocalDate.now();
-        List<CoupleMission> missions = coupleMissionRepository.findByCoupleIdAndDate(couple.getId(), today);
+        List<CoupleMission> missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         if (missions.isEmpty()) {
             List<Mission> allMissions = missionRepository.findByActiveTrue();
             Collections.shuffle(allMissions);
@@ -42,7 +42,7 @@ public class HomeController {
                 coupleMissionRepository.save(cm);
             }
 
-            missions = coupleMissionRepository.findByCoupleIdAndDate(couple.getId(), today);
+            missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         }
 
         // 4️⃣ D-Day 계산
