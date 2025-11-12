@@ -2,9 +2,11 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.CoupleMission;
+import growdy.mumuri.domain.CoupleMissionProgress;
 import growdy.mumuri.domain.Mission;
 import growdy.mumuri.dto.MainDto;
 import growdy.mumuri.login.CustomUserDetails;
+import growdy.mumuri.repository.CoupleMissionProgressRepository;
 import growdy.mumuri.repository.CoupleMissionRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.repository.MissionRepository;
@@ -25,6 +27,7 @@ public class HomeController {
     private final CoupleRepository coupleRepository;
     private final CoupleMissionRepository coupleMissionRepository;
     private final MissionRepository missionRepository;
+    private final CoupleMissionProgressRepository coupleMissionProgressRepository;
 
     @GetMapping("/user/main")
     public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user){
@@ -35,23 +38,22 @@ public class HomeController {
         if (missions.isEmpty()) {
             List<Mission> allMissions = missionRepository.findByActiveTrue();
             Collections.shuffle(allMissions);
-
             List<Mission> selected = allMissions.stream().limit(6).toList();
             for (Mission mission : selected) {
                 CoupleMission cm = new CoupleMission(couple, mission, today);
                 coupleMissionRepository.save(cm);
+                CoupleMissionProgress newcou= new CoupleMissionProgress(cm, user.getId());
+                coupleMissionProgressRepository.save(newcou);
             }
 
             missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         }
 
         // 4️⃣ D-Day 계산
-
         // 5️⃣ 미션 이름만 추출
         List<String> missionTitles = missions.stream()
                 .map(cm -> cm.getMission().getTitle())
                 .toList();
-
         // 6️⃣ DTO 구성
         MainDto mainDto = new MainDto();
         mainDto.setDday(dday);
