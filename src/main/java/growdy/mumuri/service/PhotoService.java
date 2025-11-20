@@ -53,7 +53,7 @@ public class PhotoService {
         }
 
         String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10));
-        return new PhotoResponseDto(p.getId(), url, p.getUploadedBy());
+        return new PhotoResponseDto(p.getId(), url, p.getUploadedBy(),p.getCreatedAt());
     }
 
     /** 커플 앨범 목록 (presigned URL 포함) */
@@ -63,7 +63,8 @@ public class PhotoService {
                 .map(p -> new PhotoResponseDto(
                         p.getId(),
                         s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10)),
-                        p.getUploadedBy()
+                        p.getUploadedBy(),
+                        p.getCreatedAt()
                 ))
                 .toList();
     }
