@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -36,7 +37,7 @@ public class CoupleMissionService {
     }
 
     @Transactional
-    public void completeMyPart(Long userId, Long missionId, MultipartFile photoOrNull) {
+    public Instant completeMyPart(Long userId, Long missionId, MultipartFile photoOrNull) {
         Couple couple = getCouple(userId);
         LocalDate today = LocalDate.now();
 
@@ -57,5 +58,6 @@ public class CoupleMissionService {
         progress.complete(url);
         progressRepository.save(progress);
         cm.updateStatusByProgress();
+        return cm.getCompletedAt();
     }
 }

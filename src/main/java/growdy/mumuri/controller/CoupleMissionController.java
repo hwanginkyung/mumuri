@@ -5,10 +5,12 @@ import growdy.mumuri.dto.CoupleMissionDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.CoupleMissionService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -25,9 +27,10 @@ public class CoupleMissionController {
     }
 
     @PostMapping("/{missionId}/complete")
-    public void completeMyPart(@PathVariable Long missionId,
-                               @RequestParam("file") MultipartFile file,
-                               @AuthenticationPrincipal CustomUserDetails user) {
-        coupleMissionService.completeMyPart(user.getId(), missionId, file);
+    public ResponseEntity<Instant> completeMyPart(@PathVariable Long missionId,
+                                                 @RequestParam("file") MultipartFile file,
+                                                 @AuthenticationPrincipal CustomUserDetails user) {
+        Instant now= coupleMissionService.completeMyPart(user.getId(), missionId, file);
+        return ResponseEntity.ok(now);
     }
 }
