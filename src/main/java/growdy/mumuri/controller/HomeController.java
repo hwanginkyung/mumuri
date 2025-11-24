@@ -39,7 +39,6 @@ public class HomeController {
             List<Mission> allMissions = missionRepository.findByActiveTrue();
             Collections.shuffle(allMissions);
             List<Mission> selected = allMissions.stream().limit(6).toList();
-            // ---- 여기부터 수정됨 ----
             Long member1Id = couple.getMember1().getId();
             Long member2Id = couple.getMember2().getId();
 
@@ -51,8 +50,6 @@ public class HomeController {
                 coupleMissionProgressRepository.save(new CoupleMissionProgress(cm, member1Id));
                 coupleMissionProgressRepository.save(new CoupleMissionProgress(cm, member2Id));
             }
-            // ---- 수정 끝 ----
-
             missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         }
 
