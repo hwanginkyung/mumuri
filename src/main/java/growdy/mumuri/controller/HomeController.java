@@ -30,31 +30,38 @@ public class HomeController {
     private final CoupleMissionProgressRepository coupleMissionProgressRepository;
 
     @GetMapping("/user/main")
-    public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user){
-        Couple couple= coupleRepository.findByMember1IdOrMember2Id(user.getId(),user.getId()).orElseThrow();
-        long dday=dayService.getDday(couple.getId());
+    public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user) {
+        Couple couple = coupleRepository.findByMember1IdOrMember2Id(user.getId(), user.getId()).orElseThrow();
+        long dday = dayService.getDday(couple.getId());
         LocalDate today = LocalDate.now();
         List<CoupleMission> missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         if (missions.isEmpty()) {
             List<Mission> allMissions = missionRepository.findByActiveTrue();
             Collections.shuffle(allMissions);
             List<Mission> selected = allMissions.stream().limit(6).toList();
+            // ---- 여기부터 수정됨 ----
+            Long member1Id = couple.getMember1().getId();
+            Long member2Id = couple.getMember2().getId();
+
             for (Mission mission : selected) {
                 CoupleMission cm = new CoupleMission(couple, mission, today);
                 coupleMissionRepository.save(cm);
-                CoupleMissionProgress newcou= new CoupleMissionProgress(cm, user.getId());
-                coupleMissionProgressRepository.save(newcou);
+
+                // 두 사람 모두에게 진행상태 생성
+                coupleMissionProgressRepository.save(new CoupleMissionProgress(cm, member1Id));
+                coupleMissionProgressRepository.save(new CoupleMissionProgress(cm, member2Id));
             }
+            // ---- 수정 끝 ----
 
             missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         }
 
-        // 4️⃣ D-Day 계산
-        // 5️⃣ 미션 이름만 추출
+        // 미션 제목 리스트화
         List<String> missionTitles = missions.stream()
                 .map(cm -> cm.getMission().getTitle())
                 .toList();
-        // 6️⃣ DTO 구성
+
+        // DTO 생성
         MainDto mainDto = new MainDto();
         mainDto.setDday(dday);
         mainDto.setMissionLists(missionTitles);

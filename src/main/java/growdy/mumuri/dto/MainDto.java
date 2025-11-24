@@ -12,4 +12,5 @@ import java.util.List;
 public class MainDto {
     private long dday;
     private List<String> missionLists;
+
 }
