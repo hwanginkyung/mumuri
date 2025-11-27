@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -32,5 +33,13 @@ public class CoupleMissionController {
                                                  @AuthenticationPrincipal CustomUserDetails user) {
         Instant now= coupleMissionService.completeMyPart(user.getId(), missionId, file);
         return ResponseEntity.ok(now);
+    }
+    @PostMapping(value = "/{missionId}/complete-v2", consumes = "application/json")
+    public Instant completeMyPartJson(
+            @AuthenticationPrincipal CustomUserDetails user,
+            @PathVariable Long missionId,
+            @RequestBody Map<String, String> body
+    ) {
+        return coupleMissionService.completeWithUrl(user.getId(), missionId, body.get("file"));
     }
 }

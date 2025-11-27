@@ -78,5 +78,39 @@ public class CoupleMissionService {
 
         return cm.getCompletedAt();
     }
+    @Transactional
+    public Instant completeWithUrl(Long userId, Long missionId, String fileUrl) {
+        Couple couple = getCouple(userId);
+        LocalDate today = LocalDate.now();
+
+        CoupleMission cm = coupleMissionRepository
+                .findTodayWithProgresses(couple.getId(), today)
+                .stream()
+                .filter(c -> c.getMission().getId().equals(missionId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("오늘 미션이 아닙니다."));
+
+        // progress 없으면 생성
+        if (cm.getProgresses().isEmpty()) {
+            Long m1 = couple.getMember1().getId();
+            Long m2 = couple.getMember2().getId();
+
+            new CoupleMissionProgress(cm, m1);
+            new CoupleMissionProgress(cm, m2);
+            coupleMissionRepository.save(cm);
+        }
+
+        // 내 progress 찾기
+        CoupleMissionProgress progress = cm.getProgresses().stream()
+                .filter(p -> p.getUserId().equals(userId))
+                .findFirst()
+                .orElseThrow();
+
+        progress.complete(fileUrl);  // URL 넣기
+
+        cm.updateStatusByProgress();
+
+        return cm.getCompletedAt();
+    }
 
 }
