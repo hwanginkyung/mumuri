@@ -41,24 +41,42 @@ public class CoupleMissionService {
         Couple couple = getCouple(userId);
         LocalDate today = LocalDate.now();
 
-        CoupleMission cm = coupleMissionRepository.findTodayWithProgresses(couple.getId(), today).stream()
+        CoupleMission cm = coupleMissionRepository
+                .findTodayWithProgresses(couple.getId(), today)
+                .stream()
                 .filter(c -> c.getMission().getId().equals(missionId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("오늘 미션이 아닙니다."));
 
-        CoupleMissionProgress progress = progressRepository
-                .findByCoupleMissionIdAndUserId(cm.getId(), userId)
-                .orElseGet(() -> new CoupleMissionProgress(cm, userId));
-        String url="";
-        if (photoOrNull != null && !photoOrNull.isEmpty()) {
-            // S3 업로드 + S3 URL 생성
+        // progress 없으면 두 명 모두 생성
+        if (cm.getProgresses().isEmpty()) {
+            Long m1 = couple.getMember1().getId();
+            Long m2 = couple.getMember2().getId();
 
-            url=photoService.uploadPhoto(couple.getId(),photoOrNull,userId,missionId);
+            new CoupleMissionProgress(cm, m1);
+            new CoupleMissionProgress(cm, m2);
+
+            // cascade 때문에 cm 만 저장해도 progress 자동 저장됨
+            coupleMissionRepository.save(cm);
+        }
+
+        // 내 progress 찾기
+        CoupleMissionProgress progress = cm.getProgresses().stream()
+                .filter(p -> p.getUserId().equals(userId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("progress 생성 실패"));
+
+        // 사진 처리
+        String url = "";
+        if (photoOrNull != null && !photoOrNull.isEmpty()) {
+            url = photoService.uploadPhoto(couple.getId(), photoOrNull, userId, missionId);
         }
 
         progress.complete(url);
-        progressRepository.save(progress);
-        cm.updateStatusByProgress();
+
+        cm.updateStatusByProgress(); // COMPLETED 계산
+
         return cm.getCompletedAt();
     }
+
 }
