@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +26,7 @@ public class CoupleMissionService {
     private final CoupleMissionProgressRepository progressRepository;
     private final CoupleRepository coupleRepository;
     private final PhotoService photoService;
+    private final S3Upload s3Upload;
     private Couple getCouple(Long userId) {
         Couple couple = coupleRepository.findByMember1IdOrMember2Id(userId, userId).orElseThrow();
         return couple;
@@ -33,7 +35,24 @@ public class CoupleMissionService {
     @Transactional(readOnly = true)
     public List<CoupleMission> getTodayMissions(Long userId) {
         Couple couple = getCouple(userId);
-        return coupleMissionRepository.findTodayWithProgresses(couple.getId(), LocalDate.now());
+        List<CoupleMission> missions = coupleMissionRepository.findTodayWithProgresses(
+                couple.getId(), LocalDate.now()
+        );
+
+        // presigned URL로 교체
+        missions.forEach(m -> {
+            m.getProgresses().forEach(p -> {
+                if (p.getPhotoUrl() != null && !p.getPhotoUrl().isEmpty()) {
+                    String presigned = s3Upload.presignedGetUrl(
+                            p.getPhotoUrl(),
+                            Duration.ofMinutes(10)
+                    );
+                    p.setPhotoUrl(presigned);
+                }
+            });
+        });
+
+        return missions;
     }
 
     @Transactional
