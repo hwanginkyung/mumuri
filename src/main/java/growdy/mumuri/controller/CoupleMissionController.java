@@ -24,7 +24,9 @@ public class CoupleMissionController {
     @GetMapping("/today")
     public List<CoupleMissionDto> today(@AuthenticationPrincipal CustomUserDetails user) {
         List<CoupleMission> list = coupleMissionService.getTodayMissions(user.getId());
-        return list.stream().map(CoupleMissionDto::from).toList();
+        return list.stream()
+                .map(cm -> CoupleMissionDto.from(cm, user.getId())) // userId 전달!!
+                .toList();
     }
 
     @PostMapping("/{missionId}/complete")
