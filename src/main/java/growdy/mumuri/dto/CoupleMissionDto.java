@@ -5,7 +5,7 @@ import growdy.mumuri.domain.Mission;
 import growdy.mumuri.domain.MissionDifficulty;
 import growdy.mumuri.domain.MissionStatus;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record CoupleMissionDto(
@@ -15,8 +15,9 @@ public record CoupleMissionDto(
         MissionDifficulty difficulty,
         int reward,
         MissionStatus status,
-        LocalDate missionDate,
+        LocalDateTime missionDate,
         List<UserProgressDto> progresses
+
 ){
     public static CoupleMissionDto from(CoupleMission cm) {
         Mission m = cm.getMission();

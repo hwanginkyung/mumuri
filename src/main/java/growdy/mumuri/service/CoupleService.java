@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -59,7 +60,7 @@ public class CoupleService {
                 .toList();
 
         // 4️⃣ CoupleMission 엔티티 생성 후 저장
-        LocalDate today = LocalDate.now();
+        LocalDateTime today = LocalDateTime.now();
         selected.forEach(m -> {
             CoupleMission cm = new CoupleMission(couple, m, today);
             coupleMissionRepository.save(cm);

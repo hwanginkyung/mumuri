@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +26,7 @@ public class CoupleMission extends BaseEntity {
     private Mission mission;
 
     @Column(nullable = false)
-    private LocalDate missionDate;
+    private LocalDateTime missionDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -41,7 +42,7 @@ public class CoupleMission extends BaseEntity {
     protected CoupleMission() {
     }
 
-    public CoupleMission(Couple couple, Mission mission, LocalDate date) {
+    public CoupleMission(Couple couple, Mission mission, LocalDateTime date) {
         this.couple = couple;
         this.mission = mission;
         this.missionDate = date;

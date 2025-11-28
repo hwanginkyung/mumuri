@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,7 +34,7 @@ public class HomeController {
     public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user) {
         Couple couple = coupleRepository.findByMember1IdOrMember2Id(user.getId(), user.getId()).orElseThrow();
         long dday = dayService.getDday(couple.getId());
-        LocalDate today = LocalDate.now();
+        LocalDateTime today = LocalDateTime.now();
         List<CoupleMission> missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         if (missions.isEmpty()) {
             List<Mission> allMissions = missionRepository.findByActiveTrue();

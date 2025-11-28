@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
@@ -31,5 +32,5 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
     """)
     Set<Long> findCompletedMissionIds(@Param("coupleId") Long coupleId);
 
-    List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDate missionDate);
+    List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDateTime missionDate);
 }
