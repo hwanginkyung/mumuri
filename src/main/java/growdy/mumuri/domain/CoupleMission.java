@@ -26,7 +26,7 @@ public class CoupleMission extends BaseEntity {
     private Mission mission;
 
     @Column(nullable = false)
-    private LocalDateTime missionDate;
+    private LocalDate missionDate;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 16)
@@ -42,7 +42,7 @@ public class CoupleMission extends BaseEntity {
     protected CoupleMission() {
     }
 
-    public CoupleMission(Couple couple, Mission mission, LocalDateTime date) {
+    public CoupleMission(Couple couple, Mission mission, LocalDate date) {
         this.couple = couple;
         this.mission = mission;
         this.missionDate = date;

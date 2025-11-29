@@ -34,7 +34,7 @@ public class HomeController {
     public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user) {
         Couple couple = coupleRepository.findByMember1IdOrMember2Id(user.getId(), user.getId()).orElseThrow();
         long dday = dayService.getDday(couple.getId());
-        LocalDateTime today = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         List<CoupleMission> missions = coupleMissionRepository.findByCoupleIdAndMissionDate(couple.getId(), today);
         if (missions.isEmpty()) {
             List<Mission> allMissions = missionRepository.findByActiveTrue();

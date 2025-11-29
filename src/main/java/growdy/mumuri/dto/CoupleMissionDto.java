@@ -3,6 +3,7 @@ package growdy.mumuri.dto;
 import growdy.mumuri.domain.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -13,7 +14,7 @@ public record CoupleMissionDto(
         MissionDifficulty difficulty,
         int reward,
         MissionStatus status,
-        LocalDateTime missionDate,
+        LocalDate missionDate,
         List<UserProgressDto> progresses,
         boolean myDone,          // ← 내가 완료했는가
         Instant myCompletedAt    // ← 내가 완료한 시간
