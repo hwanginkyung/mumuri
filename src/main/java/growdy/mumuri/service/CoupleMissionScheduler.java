@@ -26,7 +26,7 @@ public class CoupleMissionScheduler {
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Transactional
     public void assignDailyCoupleMissions() {
-        LocalDateTime today = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         List<Mission> all = missionRepository.findByActiveTrue();
         List<Couple> couples = coupleRepository.findAll();
 

@@ -60,7 +60,7 @@ public class CoupleService {
                 .toList();
 
         // 4️⃣ CoupleMission 엔티티 생성 후 저장
-        LocalDateTime today = LocalDateTime.now();
+        LocalDate today = LocalDate.now();
         selected.forEach(m -> {
             CoupleMission cm = new CoupleMission(couple, m, today);
             coupleMissionRepository.save(cm);
