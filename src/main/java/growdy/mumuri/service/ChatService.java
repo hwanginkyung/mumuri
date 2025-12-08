@@ -38,7 +38,9 @@ public class ChatService {
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅방"));
 
         ChatMessage message = new ChatMessage(room, sender, dto.getMessage());
-        return chatMessageRepository.save(message);
+        ChatMessage saved = chatMessageRepository.save(message);
+        log.info("[chat save] roomId={}, messageId={}", room.getId(), saved.getId());
+        return saved;
     }
 
     public void markAsRead(Long roomId, Long userId) {
