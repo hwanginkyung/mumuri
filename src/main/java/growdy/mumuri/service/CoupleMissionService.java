@@ -1,10 +1,8 @@
 package growdy.mumuri.service;
 
 import growdy.mumuri.aws.S3Upload;
-import growdy.mumuri.domain.Couple;
-import growdy.mumuri.domain.CoupleMission;
-import growdy.mumuri.domain.CoupleMissionProgress;
-import growdy.mumuri.domain.ProgressStatus;
+import growdy.mumuri.domain.*;
+import growdy.mumuri.dto.CoupleMissionHistoryDto;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleMissionProgressRepository;
 import growdy.mumuri.repository.CoupleMissionRepository;
@@ -17,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -28,6 +27,7 @@ public class CoupleMissionService {
     private final CoupleRepository coupleRepository;
     private final PhotoService photoService;
     private final S3Upload s3Upload;
+    private final MemberRepository memberRepository;
     private Couple getCouple(Long userId) {
         Couple couple = coupleRepository.findByMember1IdOrMember2Id(userId, userId).orElseThrow();
         return couple;
@@ -141,6 +141,25 @@ public class CoupleMissionService {
         cm.setCompletedAt(now);  // 🔥 전체 미션 완료 시간도 기록
 
         return cm.getCompletedAt();
+    }
+    @Transactional(readOnly = true)
+    public List<CoupleMissionHistoryDto> getMissionHistory(Long userId) {
+
+        Couple couple = getCouple(userId);
+
+        List<MissionStatus> statuses = List.of(
+                MissionStatus.HALF_DONE,
+                MissionStatus.COMPLETED
+        );
+
+        List<CoupleMission> missions =
+                coupleMissionRepository.findByCoupleIdAndStatusIn(couple.getId(), statuses);
+
+        return missions.stream()
+                .map(CoupleMissionHistoryDto::from)
+                .filter(dto -> dto.completedAt() != null)
+                .sorted(Comparator.comparing(CoupleMissionHistoryDto::completedAt))
+                .toList();
     }
 
 }

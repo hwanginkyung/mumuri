@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.dto.CoupleMissionDto;
+import growdy.mumuri.dto.CoupleMissionHistoryDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.CoupleMissionService;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +44,9 @@ public class CoupleMissionController {
             @RequestBody Map<String, String> body
     ) {
         return coupleMissionService.completeWithUrl(user.getId(), missionId, body.get("file"));
+    }
+    @GetMapping("/history")
+    public List<CoupleMissionHistoryDto> history(@AuthenticationPrincipal CustomUserDetails user) {
+        return coupleMissionService.getMissionHistory(user.getId());
     }
 }

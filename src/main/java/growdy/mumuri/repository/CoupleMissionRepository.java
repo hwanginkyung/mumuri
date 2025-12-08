@@ -1,6 +1,7 @@
 package growdy.mumuri.repository;
 
 import growdy.mumuri.domain.CoupleMission;
+import growdy.mumuri.domain.MissionStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -33,4 +34,7 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
     Set<Long> findCompletedMissionIds(@Param("coupleId") Long coupleId);
 
     List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDate missionDate);
+
+    List<CoupleMission> findByCoupleIdAndStatusIn(Long coupleId, List<MissionStatus> statuses);
+
 }
