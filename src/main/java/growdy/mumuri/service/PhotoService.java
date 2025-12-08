@@ -43,7 +43,7 @@ public class PhotoService {
                 .build();
         photoRepository.save(photo);
         urls= s3Upload.presignedGetUrl(photo.getS3Key(),Duration.ofMinutes(10));
-        return urls;
+        return key;
     }
     /** 사진 한장  (presigned URL 반환) */
     @Transactional(readOnly = true)

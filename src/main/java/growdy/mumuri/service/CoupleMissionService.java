@@ -110,7 +110,6 @@ public class CoupleMissionService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("오늘 미션이 아닙니다."));
 
-        // progress 없으면 생성
         if (cm.getProgresses().isEmpty()) {
             Long m1 = couple.getMember1().getId();
             Long m2 = couple.getMember2().getId();
@@ -121,27 +120,20 @@ public class CoupleMissionService {
             coupleMissionRepository.save(cm);
         }
 
-        // 내 progress 찾기
         CoupleMissionProgress progress = cm.getProgresses().stream()
                 .filter(p -> p.getUserId().equals(userId))
                 .findFirst()
                 .orElseThrow();
 
-        // 사진 URL 저장
-        progress.complete(fileUrl);
+        // 1) 내 progress 완료 시간/사진은 여기서만 설정
+        progress.complete(fileUrl);  // status=DONE, completedAt=Instant.now()
 
-        // 여기서 완료 시간(Instant) 다시 찍기
-        Instant now = Instant.now();
-        if (progress.getStatus() == ProgressStatus.DONE) {
-            progress.setCompletedAt(now);
-        }
+        // 2) 전체 미션 상태/완료 시간은 여기서만 설정
+        cm.updateStatusByProgress(); // HALF_DONE이면 cm.completedAt=null, COMPLETED면 cm.completedAt=Instant.now()
 
-        // 미션 전체 상태 업데이트
-        cm.updateStatusByProgress();
-        cm.setCompletedAt(now);  // 🔥 전체 미션 완료 시간도 기록
-
-        return cm.getCompletedAt();
+        return cm.getCompletedAt();  // COMPLETED 아니면 null, COMPLETED면 완료 시간
     }
+
     @Transactional(readOnly = true)
     public List<CoupleMissionHistoryDto> getMissionHistory(Long userId) {
 
@@ -154,6 +146,7 @@ public class CoupleMissionService {
 
         List<CoupleMission> missions =
                 coupleMissionRepository.findByCoupleIdAndStatusIn(couple.getId(), statuses);
+        applyPresignedUrls(missions);
 
         return missions.stream()
                 .map(CoupleMissionHistoryDto::from)
@@ -162,4 +155,17 @@ public class CoupleMissionService {
                 .toList();
     }
 
+    private void applyPresignedUrls(List<CoupleMission> missions) {
+        missions.forEach(m -> m.getProgresses().forEach(p -> {
+            String stored = p.getPhotoUrl();
+            if (stored == null || stored.isEmpty()) return;
+
+            // 이미 http로 시작하면 외부 URL이라고 보고 그대로 사용
+            if (stored.startsWith("http")) return;
+
+            // ✅ S3 key인 경우에만 presigned 만들기
+            String presigned = s3Upload.presignedGetUrl(stored, Duration.ofMinutes(10));
+            p.setPhotoUrl(presigned);
+        }));
+    }
 }
