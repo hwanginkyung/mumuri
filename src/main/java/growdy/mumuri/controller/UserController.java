@@ -55,15 +55,34 @@ public class UserController {
         return ResponseEntity.ok(birthday.toString());
     }
     @PostMapping("/anniversary")
-    public ResponseEntity<String> UpdateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
-                                                 @RequestParam LocalDate anniversary) {
-        Long memberId= user.getId();
-        Member member = memberRepository.findById(user.getId()).orElse(null);
+    public ResponseEntity<String> updateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
+                                                    @RequestParam LocalDate anniversary) {
+        Long memberId = user.getId();
         userSettingService.updateMemberAnniversary(memberId, anniversary);
-        memberService.makeCoupleCode(memberId);
-        log.info("couplecodeby annivrsary : {}", member.getCoupleCode() );
+        Member member = memberRepository.findById(memberId).orElse(null);
+        String code= member.getCoupleCode();
+        return ResponseEntity.ok(code);
+    }
+
+    /**
+     * ✅ 내 커플 코드 조회 (없으면 생성해서 반환)
+     *    - 마이페이지에서 "내 코드 보기" 버튼용
+     *    - 옵션1, 옵션2 둘 다 여기 쓰면 됨
+     */
+    @GetMapping("/couple/code")
+    public ResponseEntity<String> getOrCreateCoupleCode(@AuthenticationPrincipal CustomUserDetails user) {
+        Member member = memberRepository.findById(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+
+        if (member.getCoupleCode() == null) {
+            memberService.makeCoupleCode(member.getId());
+            log.info("generated coupleCode for memberId={}", member.getId());
+        }
+
+        log.info("coupleCode : {}", member.getCoupleCode());
         return ResponseEntity.ok(member.getCoupleCode());
     }
+
     @GetMapping("/coupletest")
     public String coupleTest(@AuthenticationPrincipal CustomUserDetails user){
         Member member = memberRepository.findById(user.getId()).orElse(null);
@@ -71,10 +90,13 @@ public class UserController {
         return member.getCoupleCode();
     }
     @PostMapping("/couple")
-    public ResponseEntity<CoupleMatchDto> MakeCouple(@AuthenticationPrincipal CustomUserDetails user,
-                                                      @RequestParam String coupleCode) {
+    public ResponseEntity<CoupleMatchDto> makeCouple(@AuthenticationPrincipal CustomUserDetails user,
+                                                     @RequestParam String coupleCode) {
         coupleService.checkAndSetCouple(user.getId(), coupleCode);
-        Couple couple = coupleRepository.findByMember1IdOrMember2Id(user.getId(),user.getId()).orElse(null);
+        Couple couple = coupleRepository
+                .findByMember1IdOrMember2Id(user.getId(), user.getId())
+                .orElseThrow(() -> new IllegalStateException("Couple not found after match"));
+
         return ResponseEntity.ok(new CoupleMatchDto("Couple matched successfully", couple.getId()));
     }
     @GetMapping("/couple/already")
@@ -84,5 +106,16 @@ public class UserController {
     @GetMapping("/getuser")
     public Long getUser(@AuthenticationPrincipal CustomUserDetails user) {
         return user.getId();
+    }
+    @DeleteMapping("/users/me")
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+
+        Long memberId = user.getId();
+        memberService.withdraw(memberId);
+
+        // 프론트에서는 이 응답 받으면
+        // - 로컬/쿠키 토큰 삭제
+        // - 로그인 화면으로 이동
+        return ResponseEntity.noContent().build();  // 204
     }
 }

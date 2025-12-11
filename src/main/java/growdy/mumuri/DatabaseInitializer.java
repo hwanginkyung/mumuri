@@ -53,6 +53,9 @@ public class DatabaseInitializer {
         em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 1").executeUpdate();
 
         System.out.println("✅ DB reset complete (missions preserved).");
+
+
+
     }
 }
 

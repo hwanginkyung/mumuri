@@ -1,15 +1,12 @@
 package growdy.mumuri.login.jwt;
 
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
-
+import java.util.Map;
 
 @Component
 public class JwtUtil {
@@ -17,26 +14,46 @@ public class JwtUtil {
     @Value("${jwt.secret}")
     private String secretKey;
 
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60 * 24; // 1일
+    // 실무에서 보통 이렇게 많이 씀
+    private static final long ACCESS_EXPIRATION  = 1000L * 60 * 30;        // 30분
+    private static final long REFRESH_EXPIRATION = 1000L * 60 * 60 * 24 * 14; // 14일
 
-    public String createToken(Long id) {
+    public String createAccessToken(Long userId) {
+        return createToken(userId, "access", ACCESS_EXPIRATION);
+    }
+
+    public String createRefreshToken(Long userId) {
+        return createToken(userId, "refresh", REFRESH_EXPIRATION);
+    }
+
+    private String createToken(Long userId, String type, long expirationMs) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + expirationMs);
+
         return Jwts.builder()
-                .setSubject(String.valueOf(id))
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(SignatureAlgorithm.HS512, secretKey.getBytes())
+                .setSubject(String.valueOf(userId))
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .addClaims(Map.of("type", type))
+                .signWith(SignatureAlgorithm.HS512, secretKey.getBytes(StandardCharsets.UTF_8))
                 .compact();
     }
 
     public Claims parseToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(secretKey.getBytes())
+                .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
-    public String getId(String token) {
-        return parseToken(token).getSubject();
+
+    public Long extractUserId(String token) {
+        return Long.parseLong(parseToken(token).getSubject());
+    }
+
+    public String extractType(String token) {
+        Object type = parseToken(token).get("type");
+        return type != null ? type.toString() : null;
     }
 
     public boolean validateToken(String token) {
@@ -48,11 +65,7 @@ public class JwtUtil {
         }
     }
 
-    public Long extractUserId(String token) {
-        Claims claims = Jwts.parser()
-                .setSigningKey(secretKey.getBytes(StandardCharsets.UTF_8))
-                .parseClaimsJws(token)
-                .getBody();
-        return Long.parseLong(claims.getSubject()); // sub에 userId를 넣어둔 경우
+    public boolean isRefreshToken(String token) {
+        return "refresh".equals(extractType(token));
     }
 }

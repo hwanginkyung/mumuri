@@ -3,20 +3,24 @@ package growdy.mumuri.login.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import growdy.mumuri.domain.ChatRoom;
+import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
+import growdy.mumuri.dto.LogoutRequest;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.dto.LoginTest;
 import growdy.mumuri.login.jwt.JwtUtil;
 import growdy.mumuri.login.service.MemberService;
+import growdy.mumuri.repository.ChatRoomRepository;
+import growdy.mumuri.repository.CoupleRepository;
+import growdy.mumuri.service.AuthService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -35,6 +39,9 @@ public class LoginController {
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final CoupleRepository coupleRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final AuthService authService;
 
 
     @Value("${kakao.redirect-uri}")
@@ -51,6 +58,7 @@ public class LoginController {
                 + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
         return "redirect:" + kakaoUrl;
     }
+
 
     /*@GetMapping("/api/auth/kakao/callback")
     public ResponseEntity<LoginTest> kakaoCallback(@RequestParam String code) {
@@ -75,36 +83,60 @@ public class LoginController {
                     .body(null);
         }
     }*/
+
     @GetMapping("/api/auth/kakao/callback")
-    public void kakaoCallback(@RequestParam String code, HttpServletResponse response) throws IOException {
-        String accessToken = getAccessToken(code);
-        String userInfoJson = getUserInfo(accessToken);
+    public ResponseEntity<Long> kakaoCallback(
+            @RequestParam String code,
+            HttpServletResponse response
+    ) throws IOException {
+        // 1. 카카오에서 access token 가져오기
+        String kakaoAccessToken = getAccessToken(code);
+
+        // 2. 카카오 사용자 정보 조회
+        String userInfoJson = getUserInfo(kakaoAccessToken);
         JsonNode userInfoNode = objectMapper.readTree(userInfoJson);
         KakaoUserInfo kakaoUser = KakaoUserInfo.from(userInfoNode);
 
-        // DB 등록 or 조회
+        // 3. 우리 서비스에 Member 등록 or 기존 유저 조회
         Member member = memberService.registerIfAbsent(kakaoUser);
 
-        // JWT 발급
-        String token = jwtUtil.createToken(member.getId());
+        // 4. 커플 / 채팅방 조회
+        Couple couple = coupleRepository
+                .findByMember1IdOrMember2Id(member.getId(), member.getId())
+                .orElse(null);
+
+        ChatRoom chatRoom = (couple != null)
+                ? chatRoomRepository.findByCouple(couple).orElse(null)
+                : null;
+
+        Long roomId = (chatRoom != null) ? chatRoom.getId() : null;
+
+        // 5. 우리 서비스 JWT(access + refresh) 발급 (실무용)
+        //    user-agent나 ip 같은 건 여기서 넘기고 싶으면 HttpServletRequest도 파라미터로 받아서 넣어주면 됨
+        var tokens = authService.issueTokens(member.getId(), null, null);
+        String accessToken = tokens.accessToken();
+        String refreshToken = tokens.refreshToken();
 
         String email = member.getEmail();       // 한글 가능
         String nickname = member.getNickname(); // 한글 가능
 
-        String encodedEmail = URLEncoder.encode(email, StandardCharsets.UTF_8);
-        String encodedNickname = URLEncoder.encode(nickname, StandardCharsets.UTF_8);
-        System.out.println(token);
+        // ⛔ 여기서 URLEncoder로 먼저 인코딩하면, 아래 build(true)가 또 인코딩해서 두 번 인코딩됨
+        //    그래서 그냥 생 문자열을 넣고, UriComponentsBuilder에 맡기는 게 좋음.
         URI deeplink = UriComponentsBuilder
                 .newInstance()
                 .scheme("mumuri")
-                .path("oauth/kakao")   // path는 맨 앞 / 없이
-                .queryParam("token", token)
-                .queryParam("email", encodedEmail)
-                .queryParam("nickname", encodedNickname)
+                .path("oauth/kakao")
+                .queryParam("accessToken", accessToken)
+                .queryParam("refreshToken", refreshToken)
+                .queryParam("email", email)
+                .queryParam("nickname", nickname)
                 .queryParam("status", member.getStatus())
-                .build(true)           // 쿼리 파라미터까지 인코딩 보장
+                .queryParam("roomId", roomId)  // 방 ID도 같이 넘겨주면 앱에서 바로 사용 가능
+                .build(true)
                 .toUri();
+
         response.sendRedirect(deeplink.toString());
+        return ResponseEntity.ok(roomId);
     }
 
 

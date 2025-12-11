@@ -65,5 +65,6 @@ public class HomeController {
         mainDto.setMissionLists(missionTitles);
 
         return mainDto;
+
     }
 }

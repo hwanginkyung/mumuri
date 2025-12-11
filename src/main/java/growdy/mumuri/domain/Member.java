@@ -29,6 +29,7 @@ public class Member extends BaseEntity{
     @OneToOne(mappedBy = "member1")
     private Couple couple;
     private String coupleCode;
+    private boolean deleted = false;
 /*    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
     private List<Photo> photos;*/
 
