@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -24,47 +25,56 @@ public class MainService {
     private final CoupleRepository coupleRepository;
 
     public HomeDto getHome(CustomUserDetails user) {
-        // 1. 로그인한 유저 조회
+        // 1. 로그인 유저
         Member me = memberRepository.findById(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
-        // 2. 커플 조회 (나를 member1 / member2 둘 다에서 찾아봄)
-        Couple couple = coupleRepository
-                .findByMember1IdOrMember2Id(me.getId(), me.getId())
-                .orElseThrow(() -> new IllegalStateException("아직 커플 매칭이 안 되어있습니다."));
+        // 2. 커플 Optional 조회 (예외 던지지 않음)
+        Optional<Couple> optionalCouple =
+                coupleRepository.findByMember1IdOrMember2Id(me.getId(), me.getId());
 
-        // 3. 상대방 찾기
-        Member partner = couple.getMember1().getId().equals(me.getId())
-                ? couple.getMember2()
-                : couple.getMember1();
-
-        // 4. 기념일 (Member에 anniversary 있다고 가정)
-        LocalDate anniversary = me.getAnniversary(); // 혹시 Couple에 있다면 couple.getAnniversary()로 바꿔도 됨
-
-        // 5. D+일 계산
+        // 기본값들
+        LocalDate anniversary = me.getAnniversary();
         Integer dDay = null;
-        if (anniversary != null) {
-            long days = ChronoUnit.DAYS.between(anniversary, LocalDate.now());
-            dDay = (int) days + 1;   // 기념일 당일을 D+1로 보고 싶으면 +1, D+0이면 +0
+        String partnerName = null;
+        List<CoupleMission> missionList = null;
+        Long roomId = null;
+
+        // 커플이 있는 경우에만 계산
+        if (optionalCouple.isPresent()) {
+            Couple couple = optionalCouple.get();
+
+            // partner
+            Member partner =
+                    couple.getMember1().getId().equals(me.getId()) ?
+                            couple.getMember2() : couple.getMember1();
+
+            if (partner != null) {
+                partnerName = partner.getName();
+            }
+
+            // D+ 계산
+            if (anniversary != null) {
+                long days = ChronoUnit.DAYS.between(anniversary, LocalDate.now());
+                dDay = (int) days + 1;
+            }
+
+            // 미션
+            missionList = couple.getQuestions();   // 존재하는 경우만
+
+            // 채팅방 (없으면 null)
+            roomId = chatRoomRepository.findByCouple(couple)
+                    .map(ChatRoom::getId)
+                    .orElse(null);
         }
 
-        // 6. 커플 미션 (도메인에 맞게 getter 이름만 맞춰주면 됨)
-        // 예시: Couple에 현재 미션이 들어있다고 가정
-        List<CoupleMission> mission = couple.getQuestions(); // 실제 필드/메서드명에 맞게 수정
-
-        // 7. 채팅방 ID 조회 (커플 기준으로 방 하나 있다고 가정)
-        ChatRoom room = chatRoomRepository.findByCouple(couple)
-                .orElseThrow(() -> new IllegalStateException("채팅방이 존재하지 않습니다."));
-        Long roomId = room.getId();
-
-        // 8. DTO 조립
-        HomeDto dto = new HomeDto(
+        return new HomeDto(
                 anniversary,
-                partner.getName(),   // 닉네임 쓰고 싶으면 getNickname()으로 변경
-                mission,
-                dDay,
-                roomId
+                partnerName,   // 커플 없으면 null
+                missionList,   // 커플 없으면 null
+                dDay,          // 커플 없으면 null
+                roomId         // 커플 없으면 null
         );
-        return dto;
     }
+
 }
