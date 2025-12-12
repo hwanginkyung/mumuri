@@ -52,6 +52,7 @@ public class MyPageService {
             }
         }
 
+
         return new MyPageDto(
                 me.getName(),
                 me.getBirthday(),
