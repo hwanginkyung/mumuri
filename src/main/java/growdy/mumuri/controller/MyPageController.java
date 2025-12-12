@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequiredArgsConstructor
 public class MyPageController {
-    private MyPageService myPageService;
+    private final MyPageService myPageService;
 
     @GetMapping("/api/mypage")
     public ResponseEntity<MyPageDto> mypage(

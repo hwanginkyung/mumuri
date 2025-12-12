@@ -98,7 +98,9 @@ public class LoginController {
         KakaoUserInfo kakaoUser = KakaoUserInfo.from(userInfoNode);
 
         // 3. 우리 서비스에 Member 등록 or 기존 유저 조회
-        Member member = memberService.registerIfAbsent(kakaoUser);
+        var result = memberService.registerIfAbsent(kakaoUser);
+        Member member = result.member();
+        boolean isNew = result.isNew();
 
         // 4. 커플 / 채팅방 조회
         Couple couple = coupleRepository
@@ -132,6 +134,7 @@ public class LoginController {
                 .queryParam("nickname", nickname)
                 .queryParam("status", member.getStatus())
                 .queryParam("roomId", roomId)
+                .queryParam("isNew", isNew)
                 .build(false)
                 .encode(StandardCharsets.UTF_8)
                 .toUri();

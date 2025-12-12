@@ -1,10 +1,7 @@
 package growdy.mumuri.service;
 
-import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
-import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.domain.Member;
-import growdy.mumuri.dto.HomeDto;
 import growdy.mumuri.dto.MyPageDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.repository.MemberRepository;
@@ -14,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Optional;
 
 @Service
