@@ -51,6 +51,8 @@ public class MyPageService {
         List<CoupleMission> mission = couple.getQuestions(); // 실제 필드/메서드명에 맞게 수정
 
 
+
+
         // 8. DTO 조립
         MyPageDto dto = new MyPageDto(
                 me.getName(),
