@@ -85,7 +85,7 @@ public class LoginController {
     }*/
 
     @GetMapping("/api/auth/kakao/callback")
-    public ResponseEntity<Long> kakaoCallback(
+    public void kakaoCallback(
             @RequestParam String code,
             HttpServletResponse response
     ) throws IOException {
@@ -131,13 +131,11 @@ public class LoginController {
                 .queryParam("email", email)
                 .queryParam("nickname", nickname)
                 .queryParam("status", member.getStatus())
-                .queryParam("roomId", roomId)  // 방 ID도 같이 넘겨주면 앱에서 바로 사용 가능
-                .build(false)                     // 🔹 아직 인코딩 안 된 상태
-                .encode(StandardCharsets.UTF_8)   // 🔹 여기서 UTF-8로 인코딩
+                .queryParam("roomId", roomId)
+                .build(false)
+                .encode(StandardCharsets.UTF_8)
                 .toUri();
-
         response.sendRedirect(deeplink.toString());
-        return ResponseEntity.ok(roomId);
     }
 
 
