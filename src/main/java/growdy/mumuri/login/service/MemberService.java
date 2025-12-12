@@ -2,6 +2,7 @@ package growdy.mumuri.login.service;
 
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
+import growdy.mumuri.dto.RegisterResult;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleRepository;
@@ -26,14 +27,14 @@ public class MemberService {
      * 카카오 간편로그인 시, 기존 회원이면 그대로 반환, 없으면 신규 생성
      */
     @Transactional
-    public Member registerIfAbsent(KakaoUserInfo userInfo) {
+    public RegisterResult registerIfAbsent(KakaoUserInfo userInfo) {
         Long kakaoId = Long.valueOf(userInfo.id());
 
         // 1️⃣ 카카오 ID로 먼저 회원 조회
         Optional<Member> existingUser = memberRepository.findByKakaoId(kakaoId);
         if (existingUser.isPresent()) {
             System.out.println("기존 사용자 로그인: " + existingUser.get());
-            return existingUser.get();
+            return new RegisterResult(existingUser.get(), false);
         }
 
         // 2️⃣ 신규 회원 등록
@@ -46,7 +47,7 @@ public class MemberService {
 
         Member saved = memberRepository.save(newUser);
         System.out.println("새 회원 저장됨: " + saved);
-        return saved;
+        return new RegisterResult(saved, true);
     }
 
     /**
