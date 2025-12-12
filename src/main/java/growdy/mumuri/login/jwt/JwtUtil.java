@@ -50,6 +50,9 @@ public class JwtUtil {
     public Long extractUserId(String token) {
         return Long.parseLong(parseToken(token).getSubject());
     }
+    public String getId(String token) {
+        return parseToken(token).getSubject();
+    }
 
     public String extractType(String token) {
         Object type = parseToken(token).get("type");
