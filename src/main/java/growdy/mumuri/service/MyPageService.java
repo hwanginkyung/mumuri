@@ -1,10 +1,7 @@
 package growdy.mumuri.service;
 
-import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
-import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.domain.Member;
-import growdy.mumuri.dto.HomeDto;
 import growdy.mumuri.dto.MyPageDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.repository.MemberRepository;
@@ -14,53 +11,53 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class MyPageService {
     private final MemberRepository memberRepository;
     private final CoupleRepository coupleRepository;
+
     public MyPageDto mypage(CustomUserDetails user) {
-        // 1. 로그인한 유저 조회
+
+        // 1. 유저 조회
         Member me = memberRepository.findById(user.getId())
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
-        // 2. 커플 조회 (나를 member1 / member2 둘 다에서 찾아봄)
-        Couple couple = coupleRepository
-                .findByMember1IdOrMember2Id(me.getId(), me.getId())
-                .orElseThrow(() -> new IllegalStateException("아직 커플 매칭이 안 되어있습니다."));
-        
-        // 3. 상대방 찾기
-        Member partner = couple.getMember1().getId().equals(me.getId())
-                ? couple.getMember2()
-                : couple.getMember1();
+        // 2. 커플 optional
+        Optional<Couple> optionalCouple =
+                coupleRepository.findByMember1IdOrMember2Id(me.getId(), me.getId());
 
-        // 4. 기념일 (Member에 anniversary 있다고 가정)
-        LocalDate anniversary = me.getAnniversary(); // 혹시 Couple에 있다면 couple.getAnniversary()로 바꿔도 됨
-
-        // 5. D+일 계산
+        // 기본값들
+        LocalDate anniversary = me.getAnniversary();
         Integer dDay = null;
-        if (anniversary != null) {
-            long days = ChronoUnit.DAYS.between(anniversary, LocalDate.now());
-            dDay = (int) days + 1;   // 기념일 당일을 D+1로 보고 싶으면 +1, D+0이면 +0
+        LocalDate partnerBirthday = null;
+
+        if (optionalCouple.isPresent()) {
+            Couple couple = optionalCouple.get();
+
+            Member partner =
+                    couple.getMember1().getId().equals(me.getId()) ?
+                            couple.getMember2() : couple.getMember1();
+
+            if (partner != null) {
+                partnerBirthday = partner.getBirthday();
+            }
+
+            // D+ 계산
+            if (anniversary != null) {
+                long days = ChronoUnit.DAYS.between(anniversary, LocalDate.now());
+                dDay = (int) days + 1;
+            }
         }
 
-        // 6. 커플 미션 (도메인에 맞게 getter 이름만 맞춰주면 됨)
-        // 예시: Couple에 현재 미션이 들어있다고 가정
-        List<CoupleMission> mission = couple.getQuestions(); // 실제 필드/메서드명에 맞게 수정
-
-
-
-
-        // 8. DTO 조립
-        MyPageDto dto = new MyPageDto(
+        return new MyPageDto(
                 me.getName(),
                 me.getBirthday(),
                 anniversary,
-                partner.getBirthday(),
-                dDay
+                partnerBirthday, // 커플 없으면 null
+                dDay              // 커플 없으면 null
         );
-        return dto;
     }
 }
