@@ -24,6 +24,7 @@ public class CoupleMission extends BaseEntity {
     private Couple couple;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JsonIgnore // 직렬화에서 제외
     private Mission mission;
 
     @Column(nullable = false)
