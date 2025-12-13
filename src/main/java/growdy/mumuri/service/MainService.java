@@ -5,9 +5,11 @@ import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.HomeDto;
+import growdy.mumuri.dto.MissionSummaryDto;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.ChatRoomRepository;
+import growdy.mumuri.repository.CoupleMissionRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class MainService {
     private final ChatRoomRepository chatRoomRepository;
     private final MemberRepository memberRepository;
     private final CoupleRepository coupleRepository;
+    private final CoupleMissionRepository coupleMissionRepository;
 
     public HomeDto getHome(CustomUserDetails user) {
         // 1. 로그인 유저
@@ -37,12 +40,14 @@ public class MainService {
         LocalDate anniversary = me.getAnniversary();
         Integer dDay = null;
         String partnerName = null;
-        List<CoupleMission> missionList = null;
+        List<MissionSummaryDto> missionList = null;
         Long roomId = null;
+        Long coupleId = null;
 
         // 커플이 있는 경우에만 계산
         if (optionalCouple.isPresent()) {
             Couple couple = optionalCouple.get();
+            coupleId = couple.getId();
 
             // partner
             Member partner =
@@ -59,8 +64,9 @@ public class MainService {
                 dDay = (int) days + 1;
             }
 
-            // 미션
-            missionList = couple.getQuestions();   // 존재하는 경우만
+
+            missionList = coupleMissionRepository.findMissionSummaries(couple.getId());
+
 
             // 채팅방 (없으면 null)
             roomId = chatRoomRepository.findByCouple(couple)
@@ -70,6 +76,7 @@ public class MainService {
 
         return new HomeDto(
                 anniversary,
+                coupleId,
                 partnerName,   // 커플 없으면 null
                 missionList,   // 커플 없으면 null
                 dDay,          // 커플 없으면 null

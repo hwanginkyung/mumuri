@@ -2,6 +2,7 @@ package growdy.mumuri.repository;
 
 import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.domain.MissionStatus;
+import growdy.mumuri.dto.MissionSummaryDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,4 +43,16 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
                                                                 @Param("date") LocalDate date);
 
     List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDate date);
+
+    @Query("""
+select new growdy.mumuri.dto.MissionSummaryDto(
+    cm.id,
+    m.title,
+    cm.status
+)
+from CoupleMission cm
+join cm.mission m
+where cm.couple.id = :coupleId
+""")
+    List<MissionSummaryDto> findMissionSummaries(Long coupleId);
 }
