@@ -1,5 +1,6 @@
 package growdy.mumuri.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -17,8 +18,10 @@ public class Couple extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @OneToOne
+    @JsonIgnore
     private Member member1;
     @OneToOne
+    @JsonIgnore
     private Member member2;
     private String coupleCode;
     private LocalDate anniversary;
