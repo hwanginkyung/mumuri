@@ -33,8 +33,13 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
     """)
     Set<Long> findCompletedMissionIds(@Param("coupleId") Long coupleId);
 
-    List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDate missionDate);
 
     List<CoupleMission> findByCoupleIdAndStatusIn(Long coupleId, List<MissionStatus> statuses);
 
+    @Query("SELECT cm FROM CoupleMission cm JOIN FETCH cm.mission " +
+            "WHERE cm.couple.id = :coupleId AND cm.missionDate = :date")
+    List<CoupleMission> findByCoupleIdAndMissionDateWithMission(@Param("coupleId") Long coupleId,
+                                                                @Param("date") LocalDate date);
+
+    List<CoupleMission> findByCoupleIdAndMissionDate(Long coupleId, LocalDate date);
 }
