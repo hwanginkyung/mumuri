@@ -100,7 +100,8 @@ public class LoginController {
         // 3. 우리 서비스에 Member 등록 or 기존 유저 조회
         var result = memberService.registerIfAbsent(kakaoUser);
         Member member = result.member();
-        boolean isNew = result.isNew();
+        boolean isNew;
+        isNew = member.getAnniversary() == null;
 
         // 4. 커플 / 채팅방 조회
         Couple couple = coupleRepository
