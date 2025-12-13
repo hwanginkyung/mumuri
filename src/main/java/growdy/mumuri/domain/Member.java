@@ -2,6 +2,7 @@ package growdy.mumuri.domain;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -27,6 +28,7 @@ public class Member extends BaseEntity{
     private String status = "solo";
     private String password;
     @OneToOne(mappedBy = "member1")
+    @JsonIgnore
     private Couple couple;
     private String coupleCode;
     private boolean deleted = false;
