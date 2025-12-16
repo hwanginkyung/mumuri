@@ -78,11 +78,6 @@ public class MainService {
                     .countByCoupleIdAndStatus(coupleId, MissionStatus.COMPLETED);
 
             Photo mainPhoto = me.getMainPhoto();
-            if (mainPhoto == null) {
-                mainPhoto = photoRepository
-                        .findFirstByCoupleIdAndDeletedFalseOrderByCreatedAtDesc(coupleId)
-                        .orElse(null);
-            }
 
             if (mainPhoto != null && !mainPhoto.isDeleted()) {
                 Long uploaderId = mainPhoto.getUploadedBy();
@@ -95,7 +90,7 @@ public class MainService {
                 String uploaderNickname = "알 수 없음";
                 if (uploaderId != null) {
                     uploaderNickname = memberRepository.findById(uploaderId)
-                            .map(Member::getNickname)
+                            .map(Member::getName)
                             .orElse("알 수 없음");
                 }
 
@@ -107,6 +102,15 @@ public class MainService {
                         uploaderType,
                         uploaderNickname,
                         mainPhoto.getCreatedAt()
+                );
+            }
+            else{
+                mainPhotoDto = new HomeDto.MainPhotoDto(
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
                 );
             }
         }

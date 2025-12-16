@@ -39,16 +39,18 @@ public class MissionCalendarService {
 
         LocalDate first = LocalDate.of(year, month, 1);
         LocalDate last = first.withDayOfMonth(first.lengthOfMonth());
-        LocalDateTime from = first.atStartOfDay();
-        LocalDateTime to = last.atTime(LocalTime.MAX);
 
         List<Photo> photos = photoRepository
-                .findByCoupleIdAndDeletedFalseAndCreatedAtBetween(couple.getId(), from, to);
+                .findByCoupleIdAndDeletedFalseAndCreatedAtBetween(
+                        couple.getId(),
+                        first.atStartOfDay(),
+                        last.atTime(LocalTime.MAX)
+                );
 
         Long myId = me.getId();
 
-        // 업로더(Member) 정보 필요하므로 한 번에 로딩
         Map<Long, Member> memberCache = loadMembersForPhotos(photos);
+        Map<Long, Mission> missionCache = loadMissionsForPhotos(photos);
 
         return photos.stream()
                 .map(p -> {
@@ -56,17 +58,19 @@ public class MissionCalendarService {
                     Member uploader = memberCache.get(uploaderId);
 
                     MissionOwnerType type =
-                            Objects.equals(uploaderId, myId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
+                            Objects.equals(uploaderId, myId)
+                                    ? MissionOwnerType.ME
+                                    : MissionOwnerType.PARTNER;
 
                     String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
-                    String texts = null;
-                    Long missionId= p.getMissionId();
-                    Mission miss= missionRepository.findById(missionId).orElse(null);
-                    texts = miss != null ? miss.getTitle() : null;
-                    String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10));
+                    Mission mission = missionCache.get(p.getMissionId());
+                    String missionTitle = mission != null ? mission.getTitle() : null;
 
-                    String missionText = p.getDescription(); // 또는 미션 연동되면 미션 타이틀로 교체
+                    String url = s3Upload.presignedGetUrl(
+                            p.getS3Key(),
+                            Duration.ofMinutes(10)
+                    );
 
                     return new MissionDetailDto(
                             p.getId(),
@@ -74,7 +78,7 @@ public class MissionCalendarService {
                             nickname,
                             p.getCreatedAt(),
                             url,
-                            texts
+                            missionTitle
                     );
                 })
                 .sorted(Comparator.comparing(MissionDetailDto::createdAt))
@@ -93,17 +97,17 @@ public class MissionCalendarService {
                 .findByMember1IdOrMember2Id(memberId, memberId)
                 .orElseThrow(() -> new IllegalStateException("커플이 아닙니다."));
 
-        LocalDateTime from = date.atStartOfDay();
-        LocalDateTime to = date.atTime(LocalTime.MAX);
-
         List<Photo> photos = photoRepository
-                .findByCoupleIdAndDeletedFalseAndCreatedAtBetween(couple.getId(), from, to);
+                .findByCoupleIdAndDeletedFalseAndCreatedAtBetween(
+                        couple.getId(),
+                        date.atStartOfDay(),
+                        date.atTime(LocalTime.MAX)
+                );
 
         Long myId = me.getId();
-        Long partnerId = getPartnerId(couple, myId);
 
-        // 업로더(Member) 정보 필요하므로 한 번에 로딩
         Map<Long, Member> memberCache = loadMembersForPhotos(photos);
+        Map<Long, Mission> missionCache = loadMissionsForPhotos(photos);
 
         return photos.stream()
                 .map(p -> {
@@ -111,21 +115,19 @@ public class MissionCalendarService {
                     Member uploader = memberCache.get(uploaderId);
 
                     MissionOwnerType type =
-                            Objects.equals(uploaderId, myId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
+                            Objects.equals(uploaderId, myId)
+                                    ? MissionOwnerType.ME
+                                    : MissionOwnerType.PARTNER;
 
                     String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
+                    Mission mission = missionCache.get(p.getMissionId());
+                    String missionTitle = mission != null ? mission.getTitle() : null;
 
-                    String texts = null;
-                    Long missionId= p.getMissionId();
-                    Mission miss= missionRepository.findById(missionId).orElse(null);
-                    texts = miss != null ? miss.getTitle() : null;
                     String url = s3Upload.presignedGetUrl(
                             p.getS3Key(),
                             Duration.ofMinutes(10)
                     );
-
-                    String missionText = p.getDescription(); // 질문/미션 문구
 
                     return new MissionDetailDto(
                             p.getId(),
@@ -133,12 +135,13 @@ public class MissionCalendarService {
                             nickname,
                             p.getCreatedAt(),
                             url,
-                            texts
+                            missionTitle
                     );
                 })
                 .sorted(Comparator.comparing(MissionDetailDto::createdAt))
                 .toList();
     }
+
 
     // ===== helper =====
 
@@ -162,5 +165,16 @@ public class MissionCalendarService {
 
         return memberRepository.findAllById(ids).stream()
                 .collect(Collectors.toMap(Member::getId, m -> m));
+    }
+    private Map<Long, Mission> loadMissionsForPhotos(List<Photo> photos) {
+        Set<Long> missionIds = photos.stream()
+                .map(Photo::getMissionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        if (missionIds.isEmpty()) return Collections.emptyMap();
+
+        return missionRepository.findAllById(missionIds).stream()
+                .collect(Collectors.toMap(Mission::getId, m -> m));
     }
 }
