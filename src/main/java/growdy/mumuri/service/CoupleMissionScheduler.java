@@ -4,14 +4,13 @@ import growdy.mumuri.domain.*;
 import growdy.mumuri.repository.CoupleMissionRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.repository.MissionRepository;
-import growdy.mumuri.repository.MissionScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -26,7 +25,8 @@ public class CoupleMissionScheduler {
     @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Transactional
     public void assignDailyCoupleMissions() {
-        LocalDate today = LocalDate.now();
+
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         List<Mission> all = missionRepository.findByActiveTrue();
         List<Couple> couples = coupleRepository.findAll();
 

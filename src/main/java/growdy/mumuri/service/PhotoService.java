@@ -2,18 +2,26 @@ package growdy.mumuri.service;
 
 import growdy.mumuri.aws.S3Upload;
 import growdy.mumuri.domain.Couple;
+import growdy.mumuri.domain.Member;
+import growdy.mumuri.domain.MissionOwnerType;
 import growdy.mumuri.domain.Photo;
+import growdy.mumuri.dto.MissionDetailDto;
 import growdy.mumuri.dto.PhotoResponseDto;
+import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -21,11 +29,14 @@ public class PhotoService {
     private final CoupleRepository coupleRepository;
     private final PhotoRepository photoRepository;
     private final S3Upload s3Upload;
+    private final MemberRepository memberRepository;
+
     public String uploadPhoto(Long coupleId, MultipartFile file, Long userId,Long missionId) {
         String key = null;
         Couple couple = null;
         String s3Url= null;
         String urls=null;
+        Long missionsId=null;
         try {
             key = "couples/" + coupleId + "/"+missionId+"/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
             couple = coupleRepository.findById(coupleId).orElse(null);
@@ -40,6 +51,7 @@ public class PhotoService {
                 .s3Key(key)
                 .url(s3Url)
                 .uploadedBy(userId)
+                .missionId(missionsId)
                 .build();
         photoRepository.save(photo);
         urls= s3Upload.presignedGetUrl(photo.getS3Key(),Duration.ofMinutes(10));
@@ -82,5 +94,52 @@ public class PhotoService {
             s3Upload.deleteObject(p.getS3Key());
         }
     }
+
+    @Transactional(readOnly = true)
+    public Page<MissionDetailDto> getGallery(Long memberId, int page) {
+
+        Couple couple = coupleRepository
+                .findByMember1IdOrMember2Id(memberId, memberId)
+                .orElseThrow(() -> new IllegalStateException("커플이 아닙니다."));
+
+        Pageable pageable = PageRequest.of(
+                page,
+                51,
+                Sort.by(Sort.Direction.DESC, "createdAt", "id") // 최신순 안정정렬
+        );
+
+        Page<Photo> photosPage = photoRepository.findByCoupleIdAndDeletedFalse(couple.getId(), pageable);
+
+        // 업로더 닉네임 조회를 N+1 안나게 한 번에 캐시
+        Set<Long> uploaderIds = photosPage.getContent().stream()
+                .map(Photo::getUploadedBy)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, Member> memberCache = memberRepository.findAllById(uploaderIds).stream()
+                .collect(Collectors.toMap(Member::getId, m -> m));
+
+        return photosPage.map(p -> {
+            Long uploaderId = p.getUploadedBy();
+            Member uploader = memberCache.get(uploaderId);
+
+            MissionOwnerType ownerType =
+                    Objects.equals(uploaderId, memberId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
+
+            String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
+
+            String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(30));
+
+            return new MissionDetailDto(
+                    p.getId(),
+                    ownerType,
+                    nickname,
+                    p.getCreatedAt(),
+                    url,
+                    p.getDescription()
+            );
+        });
+    }
+
 }
 

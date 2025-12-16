@@ -144,9 +144,13 @@ public class CoupleMissionService {
                 MissionStatus.COMPLETED
         );
 
+        Long partnerId = getPartnerId(couple, userId);
+
         List<CoupleMission> missions =
                 coupleMissionRepository.findByCoupleIdAndStatusIn(couple.getId(), statuses);
         applyPresignedUrls(missions);
+
+
 
         return missions.stream()
                 .map(CoupleMissionHistoryDto::from)
@@ -167,5 +171,14 @@ public class CoupleMissionService {
             String presigned = s3Upload.presignedGetUrl(stored, Duration.ofMinutes(10));
             p.setPhotoUrl(presigned);
         }));
+    }
+    private Long getPartnerId(Couple couple, Long myId) {
+        if (couple.getMember1() != null && couple.getMember1().getId().equals(myId)) {
+            return couple.getMember2() != null ? couple.getMember2().getId() : null;
+        }
+        if (couple.getMember2() != null && couple.getMember2().getId().equals(myId)) {
+            return couple.getMember1() != null ? couple.getMember1().getId() : null;
+        }
+        return null;
     }
 }

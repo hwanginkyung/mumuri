@@ -1,13 +1,11 @@
 package growdy.mumuri.service;
 import growdy.mumuri.aws.S3Upload;
-import growdy.mumuri.domain.Couple;
-import growdy.mumuri.domain.Member;
-import growdy.mumuri.domain.MissionOwnerType;
-import growdy.mumuri.domain.Photo;
+import growdy.mumuri.domain.*;
 import growdy.mumuri.dto.MissionDaySummaryDto;
 import growdy.mumuri.dto.MissionDetailDto;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleRepository;
+import growdy.mumuri.repository.MissionRepository;
 import growdy.mumuri.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -25,12 +23,13 @@ public class MissionCalendarService {
     private final CoupleRepository coupleRepository;
     private final PhotoRepository photoRepository;
     private final S3Upload s3Upload;
+    private final MissionRepository missionRepository;
 
     /**
      * 🗓 월 단위 미션 캘린더 (썸네일용)
      */
     @Transactional(readOnly = true)
-    public List<MissionDaySummaryDto> getMonthly(Long memberId, int year, int month) {
+    public List<MissionDetailDto> getMonthly(Long memberId, int year, int month) {
         Member me = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
@@ -46,29 +45,39 @@ public class MissionCalendarService {
         List<Photo> photos = photoRepository
                 .findByCoupleIdAndDeletedFalseAndCreatedAtBetween(couple.getId(), from, to);
 
-        Map<LocalDate, List<Photo>> byDate = photos.stream()
-                .collect(Collectors.groupingBy(p -> p.getCreatedAt().toLocalDate()));
+        Long myId = me.getId();
 
-        List<MissionDaySummaryDto> result = new ArrayList<>();
+        // 업로더(Member) 정보 필요하므로 한 번에 로딩
+        Map<Long, Member> memberCache = loadMembersForPhotos(photos);
 
-        for (LocalDate d = first; !d.isAfter(last); d = d.plusDays(1)) {
-            List<Photo> dayPhotos = byDate.getOrDefault(d, Collections.emptyList());
-            boolean hasPhoto = !dayPhotos.isEmpty();
-            String thumbUrl = null;
+        return photos.stream()
+                .map(p -> {
+                    Long uploaderId = p.getUploadedBy();
+                    Member uploader = memberCache.get(uploaderId);
 
-            if (hasPhoto) {
-                Photo firstPhoto = dayPhotos.get(0);
-                // presigned URL (짧게 10분만)
-                thumbUrl = s3Upload.presignedGetUrl(
-                        firstPhoto.getS3Key(),
-                        Duration.ofMinutes(10)
-                );
-            }
+                    MissionOwnerType type =
+                            Objects.equals(uploaderId, myId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
 
-            result.add(new MissionDaySummaryDto(d, hasPhoto, thumbUrl));
-        }
+                    String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
 
-        return result;
+                    Long missionId= p.getMissionId();
+                    Mission miss= missionRepository.findById(missionId).orElse(null);
+                    String texts=miss.getTitle();
+                    String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10));
+
+                    String missionText = p.getDescription(); // 또는 미션 연동되면 미션 타이틀로 교체
+
+                    return new MissionDetailDto(
+                            p.getId(),
+                            type,
+                            nickname,
+                            p.getCreatedAt(),
+                            url,
+                            texts
+                    );
+                })
+                .sorted(Comparator.comparing(MissionDetailDto::createdAt))
+                .toList();
     }
 
     /**
@@ -105,6 +114,9 @@ public class MissionCalendarService {
 
                     String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
 
+                    Long missionId= p.getMissionId();
+                    Mission miss= missionRepository.findById(missionId).orElse(null);
+                    String texts=miss.getTitle();
                     String url = s3Upload.presignedGetUrl(
                             p.getS3Key(),
                             Duration.ofMinutes(10)
@@ -118,7 +130,7 @@ public class MissionCalendarService {
                             nickname,
                             p.getCreatedAt(),
                             url,
-                            missionText
+                            texts
                     );
                 })
                 .sorted(Comparator.comparing(MissionDetailDto::createdAt))

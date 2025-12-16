@@ -22,6 +22,7 @@ public class Photo extends BaseEntity {
     private Couple couple;
     @Column(nullable = false)
     private boolean deleted;
+    private Long missionId;
     public void softDelete() {
         this.deleted = true;
     }
