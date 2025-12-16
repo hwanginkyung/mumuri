@@ -126,7 +126,7 @@ public class PhotoService {
             MissionOwnerType ownerType =
                     Objects.equals(uploaderId, memberId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
 
-            String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
+            String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
             String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(30));
 
