@@ -2,16 +2,17 @@ package growdy.mumuri.login.service;
 
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
+import growdy.mumuri.domain.Photo;
 import growdy.mumuri.dto.RegisterResult;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleRepository;
+import growdy.mumuri.repository.PhotoRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.Random;
 
@@ -21,6 +22,7 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
     private final CoupleRepository coupleRepository;
+    private final PhotoRepository photoRepository;
     // private final AuthService authService; // refresh 토큰 날리고 싶으면 주입해서 사용
 
     /**
@@ -107,12 +109,13 @@ public class MemberService {
             // 탈퇴한 사람 제거
             if (couple.getMember1() != null && couple.getMember1().getId().equals(memberId)) {
                 couple.setMember1(null);
-            } else if (couple.getMember2() != null && couple.getMember2().getId().equals(memberId)) {
+            }
+            if (couple.getMember2() != null && couple.getMember2().getId().equals(memberId)) {
                 couple.setMember2(null);
             }
 
-            // 둘 다 없어졌으면 커플 자체 삭제 (선택)
-            if (couple.getMember1() == null && couple.getMember2() == null) {
+            // 둘 다 없어졌으면 커플 자체 삭제
+            if (couple.getMember1() == null || couple.getMember2() == null) {
                 coupleRepository.delete(couple);
             }
         }
@@ -131,5 +134,27 @@ public class MemberService {
         /*member.setCoupleCode(null);
         member.setAnniversary(null);
         member.setBirthday(null);*/
+    }
+    @Transactional
+    public void setMainPhoto(Long memberId, Long photoId) {
+        Member me = memberRepository.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+
+        Photo photo = photoRepository.findById(photoId)
+                .orElseThrow(() -> new IllegalArgumentException("Photo not found"));
+
+        if (photo.isDeleted()) {
+            throw new IllegalArgumentException("삭제된 사진입니다.");
+        }
+
+        // ✅ 최소 검증: 내 커플 사진인지(커플 앨범에서 고르는 거라면)
+        Couple couple = coupleRepository.findByMember1IdOrMember2Id(memberId, memberId)
+                .orElseThrow(() -> new IllegalStateException("커플이 아닙니다."));
+
+        if (!photo.getCouple().getId().equals(couple.getId())) {
+            throw new IllegalArgumentException("내 커플의 사진이 아닙니다.");
+        }
+
+        me.setMainPhoto(photo);
     }
 }

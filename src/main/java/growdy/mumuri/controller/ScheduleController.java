@@ -26,6 +26,7 @@ public class ScheduleController {
     ) {
         ScheduleResponse res = scheduleService.create(user.getId(), req);
         return ResponseEntity.ok(res);
+
     }
 
     // 특정 월 일정 조회 (캘린더 화면)

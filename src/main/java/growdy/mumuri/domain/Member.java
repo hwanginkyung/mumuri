@@ -34,5 +34,9 @@ public class Member extends BaseEntity{
     private boolean deleted = false;
 /*    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
     private List<Photo> photos;*/
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_photo_id") // nullable
+    private Photo mainPhoto;
+    private String profileImageKey;
 
 }

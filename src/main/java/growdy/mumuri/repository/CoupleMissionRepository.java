@@ -13,6 +13,8 @@ import java.util.List;
 import java.util.Set;
 
 public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Long> {
+    int countByCoupleIdAndStatus(Long coupleId, MissionStatus status);
+
     @Query("""
         SELECT DISTINCT cm
         FROM CoupleMission cm
