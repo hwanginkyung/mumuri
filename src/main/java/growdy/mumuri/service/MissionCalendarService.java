@@ -58,11 +58,12 @@ public class MissionCalendarService {
                     MissionOwnerType type =
                             Objects.equals(uploaderId, myId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
 
-                    String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
+                    String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
+                    String texts = null;
                     Long missionId= p.getMissionId();
                     Mission miss= missionRepository.findById(missionId).orElse(null);
-                    String texts=miss.getTitle();
+                    texts = miss != null ? miss.getTitle() : null;
                     String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10));
 
                     String missionText = p.getDescription(); // 또는 미션 연동되면 미션 타이틀로 교체
@@ -112,11 +113,13 @@ public class MissionCalendarService {
                     MissionOwnerType type =
                             Objects.equals(uploaderId, myId) ? MissionOwnerType.ME : MissionOwnerType.PARTNER;
 
-                    String nickname = uploader != null ? uploader.getNickname() : "알 수 없음";
+                    String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
+
+                    String texts = null;
                     Long missionId= p.getMissionId();
                     Mission miss= missionRepository.findById(missionId).orElse(null);
-                    String texts=miss.getTitle();
+                    texts = miss != null ? miss.getTitle() : null;
                     String url = s3Upload.presignedGetUrl(
                             p.getS3Key(),
                             Duration.ofMinutes(10)
