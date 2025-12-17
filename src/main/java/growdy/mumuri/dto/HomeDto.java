@@ -15,7 +15,9 @@ public record HomeDto(
         Integer missionCompletedCount,
         MainPhotoDto mainPhoto,
         String myProfileImageUrl,
-        String partnerProfileImageUrl
+        String partnerProfileImageUrl,
+        String myName,
+        String partnerName
 ) {
         public record MainPhotoDto(
                 Long photoId,
