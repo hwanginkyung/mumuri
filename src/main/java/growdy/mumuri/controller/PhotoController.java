@@ -21,10 +21,10 @@ public class PhotoController {
     public ResponseEntity<String> uploadPhoto(
             @PathVariable long couple_id,
             @RequestParam("file") MultipartFile file,
+            @RequestParam Long missionId,
             @AuthenticationPrincipal CustomUserDetails user
             ){
-        Long test=(long) -1 ;
-        photoService.uploadPhoto(couple_id, file, user.getId(),test);
+        photoService.uploadPhoto(couple_id, file, user.getId(),missionId);
         return ResponseEntity.ok("photo updated successfully");
     }
     @GetMapping("/photo/{couple_id}/{photo_id}")
