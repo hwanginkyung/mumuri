@@ -53,6 +53,8 @@ public class MainService {
 
         String partnerProfileImageUrl = null;
 
+        String myName= me.getName();
+        String partnerName=null;
         if (optionalCouple.isPresent()) {
             Couple couple = optionalCouple.get();
             coupleId = couple.getId();
@@ -61,6 +63,9 @@ public class MainService {
                     ? couple.getMember2()
                     : couple.getMember1();
 
+            if(partner!=null){
+                partnerName=partner.getName();
+            }
             if (partner != null && partner.getProfileImageKey() != null) {
                 partnerProfileImageUrl = s3Upload.presignedGetUrl(partner.getProfileImageKey(), Duration.ofMinutes(30));
             }
@@ -123,7 +128,9 @@ public class MainService {
                 missionCompletedCount,
                 mainPhotoDto,
                 myProfileImageUrl,
-                partnerProfileImageUrl
+                partnerProfileImageUrl,
+                myName,
+                partnerName
         );
     }
 

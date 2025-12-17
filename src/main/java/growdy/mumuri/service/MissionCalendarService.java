@@ -65,7 +65,8 @@ public class MissionCalendarService {
                     String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
                     Mission mission = missionCache.get(p.getMissionId());
-                    String missionTitle = mission != null ? mission.getTitle() : null;
+                    String missionTitle = null;
+                    if(mission!=null) missionTitle=mission.getTitle();
 
                     String url = s3Upload.presignedGetUrl(
                             p.getS3Key(),
@@ -122,7 +123,8 @@ public class MissionCalendarService {
                     String nickname = uploader != null ? uploader.getName() : "알 수 없음";
 
                     Mission mission = missionCache.get(p.getMissionId());
-                    String missionTitle = mission != null ? mission.getTitle() : null;
+                    String missionTitle = null;
+                    if(mission!=null) missionTitle=mission.getTitle();
 
                     String url = s3Upload.presignedGetUrl(
                             p.getS3Key(),
