@@ -7,6 +7,7 @@ import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.LogoutRequest;
+import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.dto.LoginTest;
 import growdy.mumuri.login.jwt.JwtUtil;
@@ -18,6 +19,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
@@ -58,6 +60,12 @@ public class LoginController {
                 + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
         return "redirect:" + kakaoUrl;
     }
+    @DeleteMapping("/api/auth/withdraw")
+    public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
+        memberService.withdraw(user.getId()); // 또는 WithdrawalService
+        return ResponseEntity.noContent().build();
+    }
+
 
 
     /*@GetMapping("/api/auth/kakao/callback")
