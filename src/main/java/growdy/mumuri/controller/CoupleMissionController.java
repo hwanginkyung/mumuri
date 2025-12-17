@@ -37,6 +37,7 @@ public class CoupleMissionController {
         Instant now= coupleMissionService.completeMyPart(user.getId(), missionId, file);
         return ResponseEntity.ok(now);
     }
+
     @PostMapping(value = "/{missionId}/complete-v2", consumes = "application/json")
     public Instant completeMyPartJson(
             @AuthenticationPrincipal CustomUserDetails user,
@@ -45,8 +46,10 @@ public class CoupleMissionController {
     ) {
         return coupleMissionService.completeWithUrl(user.getId(), missionId, body.get("file"));
     }
+
     @GetMapping("/history")
     public List<CoupleMissionHistoryDto> history(@AuthenticationPrincipal CustomUserDetails user) {
         return coupleMissionService.getMissionHistory(user.getId());
     }
+
 }

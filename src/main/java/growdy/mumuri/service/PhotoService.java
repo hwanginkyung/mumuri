@@ -36,7 +36,6 @@ public class PhotoService {
         Couple couple = null;
         String s3Url= null;
         String urls=null;
-        Long missionsId=null;
         try {
             key = "couples/" + coupleId + "/"+missionId+"/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
             couple = coupleRepository.findById(coupleId).orElse(null);
@@ -51,7 +50,7 @@ public class PhotoService {
                 .s3Key(key)
                 .url(s3Url)
                 .uploadedBy(userId)
-                .missionId(missionsId)
+                .missionId(missionId)
                 .build();
         photoRepository.save(photo);
         urls= s3Upload.presignedGetUrl(photo.getS3Key(),Duration.ofMinutes(10));
