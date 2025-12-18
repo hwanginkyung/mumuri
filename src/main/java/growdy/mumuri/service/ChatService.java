@@ -1,4 +1,5 @@
 package growdy.mumuri.service;
+import growdy.mumuri.aws.S3Upload;
 import growdy.mumuri.domain.ChatMessage;
 import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Member;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 
@@ -30,6 +32,7 @@ public class ChatService {
     private final ChatRoomRepository chatRoomRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final MemberRepository memberRepository;
+    private final S3Upload s3Upload;
 
     public ChatMessage saveMessage(ChatMessageDto dto) {
         Member sender = memberRepository.findById(dto.getSenderId())
@@ -55,23 +58,15 @@ public class ChatService {
 
     @Transactional(readOnly = true)
     public ChatHistoryResponse getHistory(Long roomId, Long cursor, int size) {
-
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
 
-        Slice<ChatMessage> slice;
-        if (cursor == null) {
-            // 첫 요청: 가장 최신 메시지부터 size개
-            slice = chatMessageRepository.findByChatRoomIdOrderByIdDesc(roomId, pageable);
-        } else {
-            // 다음 요청: cursor(마지막으로 본 메시지 id) 보다 이전 것들
-            slice = chatMessageRepository.findByChatRoomIdAndIdLessThanOrderByIdDesc(roomId, cursor, pageable);
-        }
+        Slice<ChatMessage> slice = (cursor == null)
+                ? chatMessageRepository.findByChatRoomIdOrderByIdDesc(roomId, pageable)
+                : chatMessageRepository.findByChatRoomIdAndIdLessThanOrderByIdDesc(roomId, cursor, pageable);
 
-        // DB에서는 id DESC 로 가져왔지만,
-        // 화면에서는 오래된 것부터 보이게 ASC로 한 번 뒤집어 줌
         List<ChatMessageResponse> messages = slice.getContent().stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
-                .map(ChatMessageResponse::from)  // ✅ 기존 from(ChatMessage) 그대로 사용
+                .map(m -> ChatMessageResponse.from(m, resolveImageUrl(m.getImageUrl())))
                 .toList();
 
         Long nextCursor = null;
@@ -81,5 +76,14 @@ public class ChatService {
         }
 
         return new ChatHistoryResponse(messages, slice.hasNext(), nextCursor);
+    }
+    private String resolveImageUrl(String stored) {
+        if (stored == null || stored.isBlank()) return null;
+
+        // 외부 URL / 이미 presigned면 그대로
+        if (stored.startsWith("http")) return stored;
+
+        // ✅ stored가 S3 key일 때만 presigned 발급
+        return s3Upload.presignedGetUrl(stored, Duration.ofMinutes(10));
     }
 }
