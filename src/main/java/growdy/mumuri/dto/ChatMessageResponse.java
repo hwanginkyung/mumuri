@@ -26,7 +26,7 @@ public record ChatMessageResponse(
                 m.getSender().getId(),
                 m.getSender().getName(),
                 m.getMessage(),
-                m.getImageUrl(),
+                resolvedImageUrl,
                 m.isRead(),
                 m.getCreatedAt(),
                 m.getMissionHistoryId()
