@@ -4,9 +4,7 @@ import growdy.mumuri.aws.S3Upload;
 import growdy.mumuri.domain.*;
 import growdy.mumuri.dto.CoupleMissionHistoryDto;
 import growdy.mumuri.login.repository.MemberRepository;
-import growdy.mumuri.repository.CoupleMissionProgressRepository;
-import growdy.mumuri.repository.CoupleMissionRepository;
-import growdy.mumuri.repository.CoupleRepository;
+import growdy.mumuri.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,10 +21,11 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CoupleMissionService {
     private final CoupleMissionRepository coupleMissionRepository;
-    private final CoupleMissionProgressRepository progressRepository;
     private final CoupleRepository coupleRepository;
     private final PhotoService photoService;
     private final S3Upload s3Upload;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final MemberRepository memberRepository;
     private Couple getCouple(Long userId) {
         Couple couple = coupleRepository.findByMember1IdOrMember2Id(userId, userId).orElseThrow();
@@ -94,6 +93,7 @@ public class CoupleMissionService {
 
         progress.complete(url);
 
+        saveMissionChatLog(couple, userId, cm, url);
         cm.updateStatusByProgress(); // COMPLETED 계산
 
         return cm.getCompletedAt();
@@ -180,5 +180,21 @@ public class CoupleMissionService {
             return couple.getMember1() != null ? couple.getMember1().getId() : null;
         }
         return null;
+    }
+    private void saveMissionChatLog(Couple couple, Long userId, CoupleMission cm, String imageKeyOrUrl) {
+        ChatRoom room = chatRoomRepository.findByCouple(couple)
+                .orElseThrow(() -> new IllegalStateException("채팅방이 없습니다."));
+
+        Member performer = memberRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
+
+        // ⚠️ title 필드는 너 Mission 엔티티에 맞게 바꿔 (ex. getTitle/getName 등)
+        String title = cm.getMission().getTitle();
+
+
+        ChatMessage msg = new ChatMessage(room, performer, title);
+
+
+        chatMessageRepository.save(msg);
     }
 }

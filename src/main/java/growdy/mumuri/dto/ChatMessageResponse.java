@@ -5,27 +5,31 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.time.LocalDateTime;
-
-@Getter
-@AllArgsConstructor
-public class ChatMessageResponse {
-    private Long id;
-    private Long senderId;
-    private String message;
-    private String imageUrl;
-    //private String emojiUrl;
-    private LocalDateTime sentAt;
-    private boolean isRead;
-
-    public static ChatMessageResponse from(ChatMessage msg) {
+public record ChatMessageResponse(
+        long id,
+        String type,
+        Long senderId,
+        String senderName,
+        String message,
+        String imageUrl,
+        boolean isRead,
+        LocalDateTime createdAt,
+        Long missionHistoryId
+) {
+    public static ChatMessageResponse from(ChatMessage m) {
+        return from(m, m.getImageUrl());
+    }
+    public static ChatMessageResponse from(ChatMessage m, String resolvedImageUrl) {
         return new ChatMessageResponse(
-                msg.getId(),
-                msg.getSender().getId(),
-                msg.getMessage(),
-                msg.getImageUrl(),
-                msg.getCreatedAt(),
-                msg.isRead()
+                m.getId(),
+                m.getType().name(),
+                m.getSender().getId(),
+                m.getSender().getName(),
+                m.getMessage(),
+                m.getImageUrl(),
+                m.isRead(),
+                m.getCreatedAt(),
+                m.getMissionHistoryId()
         );
     }
 }
-
