@@ -25,7 +25,7 @@ public class PhotoController {
             @AuthenticationPrincipal CustomUserDetails user
     ){
         String fileKey = photoService.uploadPhoto(couple_id, file, user.getId(), missionId);
-        return ResponseEntity.ok( fileKey);
+        return ResponseEntity.ok(fileKey);
     }
     @GetMapping("/photo/{couple_id}/{photo_id}")
     public PhotoResponseDto getPhoto(

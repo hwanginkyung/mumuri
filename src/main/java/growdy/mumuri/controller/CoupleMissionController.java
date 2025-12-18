@@ -38,7 +38,7 @@ public class CoupleMissionController {
         return ResponseEntity.ok(now);
     }
 
-    @PostMapping(value = "/{missionId}/complete-v2", consumes = "application/json")
+    @PostMapping(value = "/{missionId}/complete-v2")
     public Instant completeMyPartJson(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long missionId,
