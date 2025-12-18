@@ -42,9 +42,9 @@ public class CoupleMissionController {
     public Instant completeMyPartJson(
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long missionId,
-            @RequestBody Map<String, String> body
+            @RequestParam String fileKey
     ) {
-        return coupleMissionService.completeWithUrl(user.getId(), missionId, body.get("file"));
+        return coupleMissionService.completeWithKey(user.getId(), missionId, fileKey);
     }
 
     @GetMapping("/history")

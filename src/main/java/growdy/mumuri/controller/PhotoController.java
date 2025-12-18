@@ -23,9 +23,9 @@ public class PhotoController {
             @RequestParam("file") MultipartFile file,
             @RequestParam Long missionId,
             @AuthenticationPrincipal CustomUserDetails user
-            ){
-        photoService.uploadPhoto(couple_id, file, user.getId(),missionId);
-        return ResponseEntity.ok("photo updated successfully");
+    ){
+        String fileKey = photoService.uploadPhoto(couple_id, file, user.getId(), missionId);
+        return ResponseEntity.ok( fileKey);
     }
     @GetMapping("/photo/{couple_id}/{photo_id}")
     public PhotoResponseDto getPhoto(

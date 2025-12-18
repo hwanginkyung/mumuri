@@ -93,13 +93,13 @@ public class CoupleMissionService {
 
         progress.complete(url);
 
-        saveMissionChatLog(couple, userId, cm, url);
+        saveMissionChatLogs(couple, userId, cm, url);
         cm.updateStatusByProgress(); // COMPLETED 계산
 
         return cm.getCompletedAt();
     }
     @Transactional
-    public Instant completeWithUrl(Long userId, Long missionId, String fileUrl) {
+    public Instant completeWithKey(Long userId, Long missionId, String fileKey) {
         Couple couple = getCouple(userId);
         LocalDate today = LocalDate.now();
 
@@ -113,10 +113,8 @@ public class CoupleMissionService {
         if (cm.getProgresses().isEmpty()) {
             Long m1 = couple.getMember1().getId();
             Long m2 = couple.getMember2().getId();
-
             new CoupleMissionProgress(cm, m1);
             new CoupleMissionProgress(cm, m2);
-
             coupleMissionRepository.save(cm);
         }
 
@@ -125,13 +123,15 @@ public class CoupleMissionService {
                 .findFirst()
                 .orElseThrow();
 
-        // 1) 내 progress 완료 시간/사진은 여기서만 설정
-        progress.complete(fileUrl);  // status=DONE, completedAt=Instant.now()
+        // ✅ fileKey는 "couples/..." 같은 S3 key 여야 함
+        String normalizedKey = normalizeImageKey(fileKey);
 
-        // 2) 전체 미션 상태/완료 시간은 여기서만 설정
-        cm.updateStatusByProgress(); // HALF_DONE이면 cm.completedAt=null, COMPLETED면 cm.completedAt=Instant.now()
+        progress.complete(normalizedKey);      // photoUrl에는 key 저장
+        cm.updateStatusByProgress();           // status HALF_DONE/COMPLETED 확정
 
-        return cm.getCompletedAt();  // COMPLETED 아니면 null, COMPLETED면 완료 시간
+        saveMissionChatLogs(couple, userId, cm, normalizedKey);
+
+        return cm.getCompletedAt();
     }
 
     @Transactional(readOnly = true)
@@ -159,6 +159,22 @@ public class CoupleMissionService {
                 .toList();
     }
 
+    private String normalizeImageKey(String value) {
+        if (value == null || value.isBlank()) return null;
+
+        // presigned GET/PUT url 같은 거면 금지(만료됨)
+        if (value.startsWith("http") && (value.contains("X-Amz-Signature") || value.contains("X-Amz-Credential"))) {
+            throw new IllegalArgumentException("presigned URL 말고 S3 key를 보내야 합니다.");
+        }
+
+        // 외부 http URL을 허용하고 싶다면 여기서 return value;
+        // 하지만 너 케이스는 S3 key로 통일하는 게 제일 안정적이라 key만 허용 추천.
+        if (value.startsWith("http")) {
+            throw new IllegalArgumentException("http URL 말고 S3 key를 보내야 합니다.");
+        }
+
+        return value; // ✅ key
+    }
     private void applyPresignedUrls(List<CoupleMission> missions) {
         missions.forEach(m -> m.getProgresses().forEach(p -> {
             String stored = p.getPhotoUrl();
@@ -181,20 +197,32 @@ public class CoupleMissionService {
         }
         return null;
     }
-    private void saveMissionChatLog(Couple couple, Long userId, CoupleMission cm, String imageKeyOrUrl) {
+    private void saveMissionChatLogs(Couple couple, Long userId, CoupleMission cm, String imageKey) {
         ChatRoom room = chatRoomRepository.findByCouple(couple)
                 .orElseThrow(() -> new IllegalStateException("채팅방이 없습니다."));
 
         Member performer = memberRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자"));
 
-        // ⚠️ title 필드는 너 Mission 엔티티에 맞게 바꿔 (ex. getTitle/getName 등)
         String title = cm.getMission().getTitle();
 
+        // 1) 텍스트 로그
+        chatMessageRepository.save(ChatMessage.builder()
+                .chatRoom(room)
+                .sender(performer)
+                .type(ChatMessageType.MISSION_TEXT)
+                .message(title)
+                .build());
 
-        ChatMessage msg = new ChatMessage(room, performer, title);
-
-
-        chatMessageRepository.save(msg);
+        // 2) 이미지 로그 (key 저장!)
+        if (imageKey != null && !imageKey.isBlank()) {
+            chatMessageRepository.save(ChatMessage.builder()
+                    .chatRoom(room)
+                    .sender(performer)
+                    .type(ChatMessageType.MISSION_IMAGE)
+                    .message("")              // 컬럼 not null이면 "" (nullable면 null 가능)
+                    .imageUrl(imageKey)       // ✅ key 저장
+                    .build());
+        }
     }
 }

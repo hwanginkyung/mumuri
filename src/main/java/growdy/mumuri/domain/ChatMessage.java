@@ -39,12 +39,12 @@ public class ChatMessage extends BaseEntity {
         this.type = ChatMessageType.CHAT;
     }
 
-    public static ChatMessage missionDone(ChatRoom room, Member performer, Long historyId, String title, String imageUrl) {
+    /*public static ChatMessage missionDone(ChatRoom room, Member performer, Long historyId, String title, String imageUrl) {
         ChatMessage m = new ChatMessage(room, performer, title);
         m.type = ChatMessageType.MISSION_DONE;
         m.missionHistoryId = historyId;
         m.imageUrl = imageUrl;
         return m;
-    }
+    }*/
 }
 
