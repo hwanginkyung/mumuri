@@ -4,8 +4,8 @@ import growdy.mumuri.domain.*;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public record CoupleMissionDto(
         Long missionId,
@@ -16,9 +16,9 @@ public record CoupleMissionDto(
         MissionStatus status,
         LocalDate missionDate,
         List<UserProgressDto> progresses,
-        boolean myDone,          // ← 내가 완료했는가
-        Instant myCompletedAt    // ← 내가 완료한 시간
-){
+        boolean myDone,
+        Instant myCompletedAt
+) {
     public static CoupleMissionDto from(CoupleMission cm, Long userId) {
 
         List<UserProgressDto> ps = cm.getProgresses().stream()
@@ -30,14 +30,17 @@ public record CoupleMissionDto(
                 ))
                 .toList();
 
-        // 🔥 여기에서 내가 한 progress 찾는다
-        CoupleMissionProgress myProgress = cm.getProgresses().stream()
-                .filter(p -> p.getUserId().equals(userId))
-                .findFirst()
-                .orElse(null);
+        Optional<CoupleMissionProgress> myProgressOpt = cm.getProgresses().stream()
+                .filter(p -> p.getUserId() != null && p.getUserId().equals(userId))
+                .findFirst();
 
-        boolean myDone = myProgress != null && myProgress.getStatus() == ProgressStatus.DONE;
-        Instant myTime = myProgress != null ? myProgress.getCompletedAt() : null;
+        boolean myDone = myProgressOpt
+                .map(p -> p.getStatus() == ProgressStatus.DONE)
+                .orElse(false);
+
+        Instant myTime = myProgressOpt
+                .map(CoupleMissionProgress::getCompletedAt)
+                .orElse(null);
 
         Mission m = cm.getMission();
 
@@ -50,8 +53,8 @@ public record CoupleMissionDto(
                 cm.getStatus(),
                 cm.getMissionDate(),
                 ps,
-                myDone,          // 내가 완료했는지
-                myTime           // 완료시간
+                myDone,
+                myTime
         );
     }
 }
