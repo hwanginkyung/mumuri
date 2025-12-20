@@ -13,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -35,8 +36,10 @@ public class CoupleMissionService {
     @Transactional(readOnly = true)
     public List<CoupleMission> getTodayMissions(Long userId) {
         Couple couple = getCouple(userId);
+        LocalDate todayKst = LocalDate.now(ZoneId.of("Asia/Seoul"));
+
         List<CoupleMission> missions = coupleMissionRepository.findTodayWithProgresses(
-                couple.getId(), LocalDate.now()
+                couple.getId(), todayKst
         );
 
         // presigned URL로 교체

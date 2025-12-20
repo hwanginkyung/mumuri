@@ -4,6 +4,7 @@ import growdy.mumuri.aws.S3Upload;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.login.service.MemberService;
+import growdy.mumuri.repository.CoupleRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +19,7 @@ import java.util.UUID;
 public class UserSettingService {
     private final MemberRepository memberRepository;
     private final MemberService memberService;
+    private final CoupleRepository coupleRepository;
     private final S3Upload s3Upload;
     @Transactional
     public void updateMemberName(Long memberId, String name) {
@@ -33,10 +35,21 @@ public class UserSettingService {
     }
     @Transactional
     public void updateMemberAnniversary(Long memberId, LocalDate anniversary) {
-        Member member = memberRepository.findById(memberId)
+        Member me = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
-        member.setAnniversary(anniversary);
-        memberService.makeCoupleCode(memberId);
+
+        coupleRepository.findByMember1IdOrMember2Id(memberId, memberId)
+                .ifPresentOrElse(couple -> {
+
+                    couple.setAnniversary(anniversary);
+                    Member m1 = couple.getMember1();
+                    Member m2 = couple.getMember2();
+                    if (m1 != null) m1.setAnniversary(anniversary);
+                    if (m2 != null) m2.setAnniversary(anniversary);
+
+                }, () -> {
+                    me.setAnniversary(anniversary);
+                });
     }
 
     @Transactional

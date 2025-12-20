@@ -26,7 +26,7 @@ public class MissionCsvImporter {
     @Transactional
     @EventListener(ApplicationReadyEvent.class)
     public void importMissionsFromCsv() {
-        Path csvPath = Path.of("/home/ubuntu/missions.csv");
+        Path csvPath = Path.of("/home/ubuntu/mission.csv");
         log.info("🚀 Importing missions from: {}", csvPath);
 
         if (missionRepository.count() > 0) {
@@ -40,6 +40,8 @@ public class MissionCsvImporter {
             br.readLine(); // header skip
             String line;
             int lineCount = 0;
+
+
 
             while ((line = br.readLine()) != null) {
                 lineCount++;
