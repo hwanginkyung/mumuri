@@ -61,7 +61,7 @@ public class CoupleMissionService {
     @Transactional
     public Instant completeMyPart(Long userId, Long missionId, MultipartFile photoOrNull) {
         Couple couple = getCouple(userId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
 
         CoupleMission cm = coupleMissionRepository
                 .findTodayWithProgresses(couple.getId(), today)
@@ -104,7 +104,7 @@ public class CoupleMissionService {
     @Transactional
     public Instant completeWithKey(Long userId, Long missionId, String fileKey) {
         Couple couple = getCouple(userId);
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
 
         CoupleMission cm = coupleMissionRepository
                 .findTodayWithProgresses(couple.getId(), today)
