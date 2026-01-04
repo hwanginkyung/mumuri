@@ -6,13 +6,13 @@ import growdy.mumuri.domain.Photo;
 import growdy.mumuri.dto.RegisterResult;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.repository.MemberRepository;
-import growdy.mumuri.repository.CoupleRepository;
-import growdy.mumuri.repository.PhotoRepository;
+import growdy.mumuri.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 
@@ -23,6 +23,10 @@ public class MemberService {
     private final MemberRepository memberRepository;
     private final CoupleRepository coupleRepository;
     private final PhotoRepository photoRepository;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final CoupleMissionRepository coupleMissionRepository;
+    private final CoupleMissionProgressRepository coupleMissionProgressRepository;
     // private final AuthService authService; // refresh 토큰 날리고 싶으면 주입해서 사용
 
     /**
@@ -100,41 +104,50 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
-        // 1. 커플 관계 정리
         Couple couple = coupleRepository
                 .findByMember1IdOrMember2Id(memberId, memberId)
                 .orElse(null);
 
         if (couple != null) {
-            // 탈퇴한 사람 제거
-            if (couple.getMember1() != null && couple.getMember1().getId().equals(memberId)) {
-                couple.setMember1(null);
-            }
-            if (couple.getMember2() != null && couple.getMember2().getId().equals(memberId)) {
-                couple.setMember2(null);
-            }
+            Long coupleId = couple.getId();
 
-            // 둘 다 없어졌으면 커플 자체 삭제
-            if (couple.getMember1() == null || couple.getMember2() == null) {
-                coupleRepository.delete(couple);
+            // 1) 채팅방/채팅메시지 삭제 (FK 순서 중요)
+            chatRoomRepository.findByCouple(couple).ifPresent(room -> {
+                chatMessageRepository.deleteByChatRoomId(room.getId());
+                chatRoomRepository.delete(room);
+            });
+
+            // 2) 미션 progress -> 미션 삭제 (FK 순서 중요)
+            // progress repo가 없다면, coupleMissionProgress가 cascade REMOVE 되도록 설정 필요
+            List<Long> cmIds = coupleMissionRepository.findIdsByCoupleId(coupleId);
+            if (!cmIds.isEmpty()) {
+                coupleMissionProgressRepository.deleteByCoupleMissionIdIn(cmIds);
             }
+            coupleMissionRepository.deleteByCoupleId(coupleId);
+
+            // 3) 사진 삭제(있다면)
+            photoRepository.deleteByCoupleId(coupleId);
+
+            // 4) 마지막에 couple 삭제
+            coupleRepository.delete(couple);
         }
 
-        // 2. 토큰 무효화 (refresh 사용 시)
-        // authService.revokeAllForMember(memberId);
-
-        // 3. soft delete 플래그 + 비식별 처리
+        // 5) member는 소프트 탈퇴
         member.setDeleted(true);
         member.setStatus("deleted");
         member.setNickname("탈퇴한 사용자");
-        member.setEmail(null);
-        member.setKakaoId(null); // 재가입 허용 정책에 따라 유지/삭제 선택
 
-        // 필요하면 기타 프로필도 초기화
-        /*member.setCoupleCode(null);
-        member.setAnniversary(null);
-        member.setBirthday(null);*/
+        // ⚠️ email 컬럼이 NOT NULL이면 null로 두면 또 터짐
+        // -> 안전하게 더미로 바꿔서 유니크도 피하기
+        member.setEmail("deleted_" + memberId + "@mumuri.invalid");
+
+        // kakaoId가 nullable이면 null로(재가입 허용이면 보통 null)
+        member.setKakaoId(null);
+
+        // 필요하면 profile도 정리
+        member.setProfileImageKey(null);
     }
+
     @Transactional
     public void setMainPhoto(Long memberId, Long photoId) {
         Member me = memberRepository.findById(memberId)

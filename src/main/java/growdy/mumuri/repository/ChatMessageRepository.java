@@ -14,6 +14,7 @@ import java.util.List;
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
 
+    void deleteByChatRoomId(Long chatRoomId);
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("""
         UPDATE ChatMessage m

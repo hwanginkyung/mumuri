@@ -1,14 +1,13 @@
 package growdy.mumuri.service;
 import growdy.mumuri.aws.S3Upload;
-import growdy.mumuri.domain.ChatMessage;
-import growdy.mumuri.domain.ChatRoom;
-import growdy.mumuri.domain.Member;
+import growdy.mumuri.domain.*;
 import growdy.mumuri.dto.ChatHistoryResponse;
 import growdy.mumuri.dto.ChatMessageDto;
 import growdy.mumuri.dto.ChatMessageResponse;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.ChatMessageRepository;
 import growdy.mumuri.repository.ChatRoomRepository;
+import growdy.mumuri.repository.CoupleMissionRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -19,8 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static growdy.mumuri.service.PhotoService.toBlurKey;
 
 
 @Slf4j
@@ -33,6 +34,7 @@ public class ChatService {
     private final ChatMessageRepository chatMessageRepository;
     private final MemberRepository memberRepository;
     private final S3Upload s3Upload;
+    private final CoupleMissionRepository coupleMissionRepository;
 
     public ChatMessage saveMessage(ChatMessageDto dto) {
         Member sender = memberRepository.findById(dto.getSenderId())
@@ -57,16 +59,29 @@ public class ChatService {
     }
 
     @Transactional(readOnly = true)
-    public ChatHistoryResponse getHistory(Long roomId, Long cursor, int size) {
+    public ChatHistoryResponse getHistory(Long roomId, Long cursor, int size, Long viewerId) {
         Pageable pageable = PageRequest.of(0, size, Sort.by(Sort.Direction.DESC, "id"));
 
         Slice<ChatMessage> slice = (cursor == null)
                 ? chatMessageRepository.findByChatRoomIdOrderByIdDesc(roomId, pageable)
                 : chatMessageRepository.findByChatRoomIdAndIdLessThanOrderByIdDesc(roomId, cursor, pageable);
 
+        // ✅ 이번 페이지에 등장한 missionHistoryId들 한번에 조회해서 status 맵 생성
+        Map<Long, MissionStatus> statusByMissionId = slice.getContent().stream()
+                .map(ChatMessage::getMissionHistoryId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toList(),
+                        ids -> ids.isEmpty()
+                                ? Collections.emptyMap()
+                                : coupleMissionRepository.findAllById(ids).stream()
+                                .collect(Collectors.toMap(CoupleMission::getId, CoupleMission::getStatus))
+                ));
+
         List<ChatMessageResponse> messages = slice.getContent().stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
-                .map(m -> ChatMessageResponse.from(m, resolveImageUrl(m.getImageUrl())))
+                .map(m -> ChatMessageResponse.from(m, resolveImageUrl(m, viewerId, statusByMissionId)))
                 .toList();
 
         Long nextCursor = null;
@@ -77,13 +92,23 @@ public class ChatService {
 
         return new ChatHistoryResponse(messages, slice.hasNext(), nextCursor);
     }
-    private String resolveImageUrl(String stored) {
+
+    private String resolveImageUrl(ChatMessage m, Long viewerId, Map<Long, MissionStatus> statusByMissionId) {
+        String stored = m.getImageUrl();
         if (stored == null || stored.isBlank()) return null;
 
-        // 외부 URL / 이미 presigned면 그대로
         if (stored.startsWith("http")) return stored;
 
-        // ✅ stored가 S3 key일 때만 presigned 발급
-        return s3Upload.presignedGetUrl(stored, Duration.ofMinutes(10));
+        boolean shouldBlurForViewer =
+                viewerId != null
+                        && m.getType() == ChatMessageType.MISSION_IMAGE
+                        && m.getSender() != null
+                        && m.getSender().getId() != null
+                        && !m.getSender().getId().equals(viewerId)
+                        && m.getMissionHistoryId() != null
+                        && statusByMissionId.get(m.getMissionHistoryId()) == MissionStatus.HALF_DONE;
+
+        String keyToExpose = shouldBlurForViewer ? toBlurKey(stored) : stored;
+        return s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
     }
 }

@@ -10,6 +10,7 @@ import growdy.mumuri.dto.PhotoResponseDto;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.repository.PhotoRepository;
+import growdy.mumuri.util.ImageBlurUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -31,20 +32,27 @@ public class PhotoService {
     private final S3Upload s3Upload;
     private final MemberRepository memberRepository;
 
-    public String uploadPhoto(Long coupleId, MultipartFile file, Long userId,Long missionId) {
-        String key = null;
-        Couple couple = null;
-        String s3Url= null;
-        String urls=null;
+    public String uploadPhoto(Long coupleId, MultipartFile file, Long userId, Long missionId) {
+        String key;
+        Couple couple;
+        String s3Url;
+
         try {
-            key = "couples/" + coupleId + "/"+missionId+"/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
+            key = "couples/" + coupleId + "/" + missionId + "/" + UUID.randomUUID() + "_" + file.getOriginalFilename();
             couple = coupleRepository.findById(coupleId).orElse(null);
-            // S3 업로드 + S3 URL 생성
-            s3Url = s3Upload.upload(file,key,"image/jpeg");
+
+            // 원본 업로드
+            s3Url = s3Upload.upload(file, key, "image/jpeg");
+
+            // 블러 업로드
+            String blurKey = toBlurKey(key);
+            byte[] blurred = ImageBlurUtil.blurToJpeg(file.getInputStream(), 12);
+            s3Upload.uploadBytes(blurred, blurKey, "image/jpeg");
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        // DB 저장
+
         Photo photo = Photo.builder()
                 .couple(couple)
                 .s3Key(key)
@@ -53,8 +61,8 @@ public class PhotoService {
                 .missionId(missionId)
                 .build();
         photoRepository.save(photo);
-        urls= s3Upload.presignedGetUrl(photo.getS3Key(),Duration.ofMinutes(10));
-        return key;
+
+        return key; // progress에는 key 저장
     }
     /** 사진 한장  (presigned URL 반환) */
     @Transactional(readOnly = true)
@@ -138,6 +146,13 @@ public class PhotoService {
                     p.getDescription()
             );
         });
+    }
+
+    public static String toBlurKey(String originalKey) {
+        if (originalKey == null || originalKey.isBlank()) return originalKey;
+        int idx = originalKey.lastIndexOf('/');
+        if (idx < 0) return "blur_" + originalKey;
+        return originalKey.substring(0, idx + 1) + "blur_" + originalKey.substring(idx + 1);
     }
 
 }
