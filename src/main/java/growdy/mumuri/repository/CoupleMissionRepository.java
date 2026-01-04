@@ -17,6 +17,9 @@ public interface CoupleMissionRepository extends JpaRepository<CoupleMission, Lo
     long countByCoupleIdAndMissionDate(Long coupleId, LocalDate missionDate);
 
 
+    void deleteByCoupleId(Long coupleId);
+    @Query("select cm.id from CoupleMission cm where cm.couple.id = :coupleId")
+    List<Long> findIdsByCoupleId(@Param("coupleId") Long coupleId);
     @Query("""
         SELECT DISTINCT cm
         FROM CoupleMission cm

@@ -12,6 +12,7 @@ import java.util.Optional;
 
 
 public interface PhotoRepository extends JpaRepository<Photo, Long> {
+    void deleteByCoupleId(Long coupleId);
     List<Photo> findByCoupleIdAndDeletedFalseOrderByIdDesc(Long coupleId);
     Photo findByIdAndCoupleId(Long id, Long coupleId);
     List<Photo> findByCoupleIdAndDeletedFalseAndCreatedAtBetween(
