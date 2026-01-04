@@ -75,5 +75,27 @@ public class S3Upload {
                 .key(key)
                 .build());
     }
+    public String uploadBytes(byte[] bytes, String key, String contentType) {
+        try {
+            log.info("S3 업로드(바이트) 시작: bucket={}, key={}, size={}", bucket, key, bytes.length);
+
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(contentType)
+                    .build();
+
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(bytes));
+
+            URL staticUrl = s3Client.utilities().getUrl(GetUrlRequest.builder()
+                    .bucket(bucket).key(key).build());
+            log.info("S3 업로드(바이트) 완료: {}", staticUrl);
+            return staticUrl.toString();
+
+        } catch (Exception e) {
+            log.error("S3 업로드(바이트) 실패", e);
+            throw new RuntimeException("S3 uploadBytes failed", e);
+        }
+    }
 }
 

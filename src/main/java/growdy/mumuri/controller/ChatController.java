@@ -2,10 +2,12 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.ChatMessage;
 import growdy.mumuri.dto.*;
+import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -39,8 +41,10 @@ public class ChatController {
     public ChatHistoryResponse getChatHistory(
             @PathVariable Long roomId,
             @RequestParam(required = false) Long cursor,
-            @RequestParam(defaultValue = "50") int size
+            @RequestParam(defaultValue = "50") int size,
+            @AuthenticationPrincipal CustomUserDetails user
     ) {
-        return chatService.getHistory(roomId, cursor, size);
+        Long viewerId = (user != null ? user.getId() : null);
+        return chatService.getHistory(roomId, cursor, size, viewerId);
     }
 }

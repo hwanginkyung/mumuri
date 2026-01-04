@@ -43,17 +43,21 @@ public class CoupleMissionService {
         );
 
         // presigned URL로 교체
-        missions.forEach(m -> {
-            m.getProgresses().forEach(p -> {
-                if (p.getPhotoUrl() != null && !p.getPhotoUrl().isEmpty()) {
-                    String presigned = s3Upload.presignedGetUrl(
-                            p.getPhotoUrl(),
-                            Duration.ofMinutes(10)
-                    );
-                    p.setPhotoUrl(presigned);
-                }
-            });
-        });
+        missions.forEach(m -> m.getProgresses().forEach(p -> {
+            String stored = p.getPhotoUrl();
+            if (stored == null || stored.isEmpty()) return;
+            if (stored.startsWith("http")) return;
+
+            boolean shouldBlurForViewer =
+                    m.getStatus() == MissionStatus.HALF_DONE
+                            && p.getStatus() == ProgressStatus.DONE
+                            && p.getUserId() != null
+                            && !p.getUserId().equals(userId); // ✅ “상대방만” 블러
+
+            String keyToExpose = shouldBlurForViewer ? toBlurKey(stored) : stored;
+            p.setPhotoUrl(s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10)));
+        }));
+
 
         return missions;
     }
@@ -136,30 +140,42 @@ public class CoupleMissionService {
 
         return cm.getCompletedAt();
     }
-
     @Transactional(readOnly = true)
     public List<CoupleMissionHistoryDto> getMissionHistory(Long userId) {
-
         Couple couple = getCouple(userId);
 
-        List<MissionStatus> statuses = List.of(
-                MissionStatus.HALF_DONE,
-                MissionStatus.COMPLETED
-        );
-
-        Long partnerId = getPartnerId(couple, userId);
+        List<MissionStatus> statuses = List.of(MissionStatus.HALF_DONE, MissionStatus.COMPLETED);
 
         List<CoupleMission> missions =
                 coupleMissionRepository.findByCoupleIdAndStatusIn(couple.getId(), statuses);
-        applyPresignedUrls(missions);
 
-
+        // ✅ 여기(가져온 직후)에 넣기
+        applyPresignedUrls(missions, userId);
 
         return missions.stream()
                 .map(CoupleMissionHistoryDto::from)
                 .filter(dto -> dto.completedAt() != null)
                 .sorted(Comparator.comparing(CoupleMissionHistoryDto::completedAt))
                 .toList();
+    }
+
+    // ✅ getMissionHistory 아래 아무데나(보통 하단)에 추가
+    private void applyPresignedUrls(List<CoupleMission> missions, Long viewerId) {
+        missions.forEach(m -> m.getProgresses().forEach(p -> {
+            String stored = p.getPhotoUrl();
+            if (stored == null || stored.isEmpty()) return;
+            if (stored.startsWith("http")) return;
+
+            boolean shouldBlurForViewer =
+                    m.getStatus() == MissionStatus.HALF_DONE
+                            && p.getStatus() == ProgressStatus.DONE
+                            && p.getUserId() != null
+                            && viewerId != null
+                            && !p.getUserId().equals(viewerId);
+
+            String keyToExpose = shouldBlurForViewer ? toBlurKey(stored) : stored;
+            p.setPhotoUrl(s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10)));
+        }));
     }
 
     private String normalizeImageKey(String value) {
@@ -214,18 +230,26 @@ public class CoupleMissionService {
                 .chatRoom(room)
                 .sender(performer)
                 .type(ChatMessageType.MISSION_TEXT)
+                .missionHistoryId(cm.getId())   // ✅ 추가
                 .message(title)
                 .build());
 
-        // 2) 이미지 로그 (key 저장!)
+        // 2) 이미지 로그
         if (imageKey != null && !imageKey.isBlank()) {
             chatMessageRepository.save(ChatMessage.builder()
                     .chatRoom(room)
                     .sender(performer)
                     .type(ChatMessageType.MISSION_IMAGE)
-                    .message("")              // 컬럼 not null이면 "" (nullable면 null 가능)
-                    .imageUrl(imageKey)       // ✅ key 저장
+                    .missionHistoryId(cm.getId())   // ✅ 추가
+                    .message("")
+                    .imageUrl(imageKey)
                     .build());
         }
+    }
+    private String toBlurKey(String originalKey) {
+        if (originalKey == null || originalKey.isBlank()) return originalKey;
+        int idx = originalKey.lastIndexOf('/');
+        if (idx < 0) return "blur_" + originalKey;
+        return originalKey.substring(0, idx + 1) + "blur_" + originalKey.substring(idx + 1);
     }
 }
