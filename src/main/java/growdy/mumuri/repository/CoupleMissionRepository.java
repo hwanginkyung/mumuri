@@ -62,4 +62,28 @@ join cm.mission m
 where cm.couple.id = :coupleId
 """)
     List<MissionSummaryDto> findMissionSummaries(Long coupleId);
+    @Query("""
+    select cm
+    from CoupleMission cm
+    join fetch cm.mission m
+    where cm.couple.id = :coupleId
+      and cm.missionDate between :start and :end
+""")
+    List<CoupleMission> findWithMissionBetween(
+            @Param("coupleId") Long coupleId,
+            @Param("start") LocalDate start,
+            @Param("end") LocalDate end
+    );
+
+    @Query("""
+    select cm
+    from CoupleMission cm
+    join fetch cm.mission m
+    where cm.couple.id = :coupleId
+      and cm.missionDate in :dates
+""")
+    List<CoupleMission> findWithMissionByDates(
+            @Param("coupleId") Long coupleId,
+            @Param("dates") List<LocalDate> dates
+    );
 }
