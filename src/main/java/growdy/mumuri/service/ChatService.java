@@ -21,7 +21,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static growdy.mumuri.service.PhotoService.toBlurKey;
+import static growdy.mumuri.util.BlurKeyUtil.toBlurKey;
 
 
 @Slf4j
