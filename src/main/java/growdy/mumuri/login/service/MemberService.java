@@ -111,40 +111,73 @@ public class MemberService {
         if (couple != null) {
             Long coupleId = couple.getId();
 
-            // 1) 채팅방/채팅메시지 삭제 (FK 순서 중요)
+            // ✅ 상대방 찾기
+            Member partner = null;
+            if (couple.getMember1() != null && couple.getMember1().getId().equals(memberId)) {
+                partner = couple.getMember2();
+            } else if (couple.getMember2() != null && couple.getMember2().getId().equals(memberId)) {
+                partner = couple.getMember1();
+            }
+
+            // =========================
+            // 0) FK 끊기 (중요!!)
+            // =========================
+            member.setMainPhoto(null);
+            if (partner != null) partner.setMainPhoto(null);
+
+            // member 테이블 업데이트가 먼저 나가도록 flush (FK 때문에 중요)
+            memberRepository.flush();
+
+            // =========================
+            // 1) 채팅방/메시지 삭제
+            // =========================
             chatRoomRepository.findByCouple(couple).ifPresent(room -> {
                 chatMessageRepository.deleteByChatRoomId(room.getId());
                 chatRoomRepository.delete(room);
             });
 
-            // 2) 미션 progress -> 미션 삭제 (FK 순서 중요)
-            // progress repo가 없다면, coupleMissionProgress가 cascade REMOVE 되도록 설정 필요
+            // =========================
+            // 2) 미션 progress -> 미션 삭제
+            // =========================
             List<Long> cmIds = coupleMissionRepository.findIdsByCoupleId(coupleId);
             if (!cmIds.isEmpty()) {
                 coupleMissionProgressRepository.deleteByCoupleMissionIdIn(cmIds);
             }
             coupleMissionRepository.deleteByCoupleId(coupleId);
 
-            // 3) 사진 삭제(있다면)
+            // =========================
+            // 3) 사진 삭제 (FK 끊은 뒤!)
+            // =========================
             photoRepository.deleteByCoupleId(coupleId);
 
-            // 4) 마지막에 couple 삭제
+            // =========================
+            // 4) couple 삭제
+            // =========================
             coupleRepository.delete(couple);
+
+            // ✅ 상대방은 솔로로 되돌리기 (추천)
+            if (partner != null) {
+                partner.setStatus("solo");
+                partner.setCoupleCode(null);
+                // partner.setAnniversary(null); // 정책에 따라 (커플 기념일을 member에 저장한다면 null 추천)
+            }
         }
 
-        // 5) member는 소프트 탈퇴
+        // =========================
+        // 5) 탈퇴자 소프트 탈퇴 처리
+        // =========================
         member.setDeleted(true);
         member.setStatus("deleted");
         member.setNickname("탈퇴한 사용자");
+        member.setCoupleCode(null);
+        // member.setAnniversary(null); // 정책에 따라
 
-        // ⚠️ email 컬럼이 NOT NULL이면 null로 두면 또 터짐
-        // -> 안전하게 더미로 바꿔서 유니크도 피하기
+        // email NOT NULL/UNIQUE 대비
         member.setEmail("deleted_" + memberId + "@mumuri.invalid");
 
-        // kakaoId가 nullable이면 null로(재가입 허용이면 보통 null)
+        // 재가입 허용이면 null
         member.setKakaoId(null);
 
-        // 필요하면 profile도 정리
         member.setProfileImageKey(null);
     }
 
