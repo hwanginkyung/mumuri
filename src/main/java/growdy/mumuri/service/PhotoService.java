@@ -43,7 +43,7 @@ public class PhotoService {
             s3Upload.upload(file, key, "image/jpeg");
 
             // 2) 블러 사본 업로드 (✅ 여기 값 올리면 블러 강해짐)
-            int BLUR_DOWNSCALE = 22; // <-- 약하면 18->22->26 이런 식으로 올려
+            int BLUR_DOWNSCALE = 26; // <-- 약하면 18->22->26 이런 식으로 올려
             byte[] blurred = ImageBlurUtil.blurToJpeg(file.getInputStream(), BLUR_DOWNSCALE);
             String blurKey = BlurKeyUtil.toBlurKey(key);
             s3Upload.uploadBytes(blurred, blurKey, "image/jpeg");
@@ -165,12 +165,6 @@ public class PhotoService {
         });
     }
 
-    public static String toBlurKey(String originalKey) {
-        if (originalKey == null || originalKey.isBlank()) return originalKey;
-        int idx = originalKey.lastIndexOf('/');
-        if (idx < 0) return "blur_" + originalKey;
-        return originalKey.substring(0, idx + 1) + "blur_" + originalKey.substring(idx + 1);
-    }
 
 }
 
