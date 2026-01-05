@@ -4,9 +4,11 @@ import growdy.mumuri.domain.*;
 import growdy.mumuri.dto.MissionDaySummaryDto;
 import growdy.mumuri.dto.MissionDetailDto;
 import growdy.mumuri.login.repository.MemberRepository;
+import growdy.mumuri.repository.CoupleMissionRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.repository.MissionRepository;
 import growdy.mumuri.repository.PhotoRepository;
+import growdy.mumuri.util.BlurKeyUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,7 +26,9 @@ public class MissionCalendarService {
     private final PhotoRepository photoRepository;
     private final S3Upload s3Upload;
     private final MissionRepository missionRepository;
+    private final CoupleMissionRepository coupleMissionRepository;
 
+    private record MissionKey(LocalDate date, Long missionId) {}
     /**
      * 🗓 월 단위 미션 캘린더 (썸네일용)
      */
@@ -52,6 +56,14 @@ public class MissionCalendarService {
         Map<Long, Member> memberCache = loadMembersForPhotos(photos);
         Map<Long, Mission> missionCache = loadMissionsForPhotos(photos);
 
+        Map<MissionKey, MissionStatus> statusMap = coupleMissionRepository
+                .findWithMissionBetween(couple.getId(), first, last)
+                .stream()
+                .collect(Collectors.toMap(
+                        cm -> new MissionKey(cm.getMissionDate(), cm.getMission().getId()),
+                        CoupleMission::getStatus,
+                        (a, b) -> a
+                ));
         return photos.stream()
                 .map(p -> {
                     Long uploaderId = p.getUploadedBy();
@@ -68,10 +80,13 @@ public class MissionCalendarService {
                     String missionTitle = null;
                     if(mission!=null) missionTitle=mission.getTitle();
 
-                    String url = s3Upload.presignedGetUrl(
-                            p.getS3Key(),
-                            Duration.ofMinutes(10)
-                    );
+                    LocalDate missionDate = p.getCreatedAt().toLocalDate();
+                    MissionStatus st = statusMap.get(new MissionKey(missionDate, p.getMissionId()));
+
+                    boolean shouldBlur = (st == MissionStatus.HALF_DONE) && !Objects.equals(uploaderId, myId);
+
+                    String keyToExpose = shouldBlur ? BlurKeyUtil.toBlurKey(p.getS3Key()) : p.getS3Key();
+                    String url = s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
 
                     return new MissionDetailDto(
                             p.getId(),
@@ -110,6 +125,16 @@ public class MissionCalendarService {
         Map<Long, Member> memberCache = loadMembersForPhotos(photos);
         Map<Long, Mission> missionCache = loadMissionsForPhotos(photos);
 
+        List<LocalDate> dates = List.of(date);
+
+        Map<MissionKey, MissionStatus> statusMap = coupleMissionRepository
+                .findWithMissionByDates(couple.getId(), dates)
+                .stream()
+                .collect(Collectors.toMap(
+                        cm -> new MissionKey(cm.getMissionDate(), cm.getMission().getId()),
+                        CoupleMission::getStatus,
+                        (a, b) -> a
+                ));
         return photos.stream()
                 .map(p -> {
                     Long uploaderId = p.getUploadedBy();
@@ -126,10 +151,13 @@ public class MissionCalendarService {
                     String missionTitle = null;
                     if(mission!=null) missionTitle=mission.getTitle();
 
-                    String url = s3Upload.presignedGetUrl(
-                            p.getS3Key(),
-                            Duration.ofMinutes(10)
-                    );
+                    LocalDate missionDate = p.getCreatedAt().toLocalDate();
+                    MissionStatus st = statusMap.get(new MissionKey(missionDate, p.getMissionId()));
+
+                    boolean shouldBlur = (st == MissionStatus.HALF_DONE) && !Objects.equals(uploaderId, myId);
+
+                    String keyToExpose = shouldBlur ? BlurKeyUtil.toBlurKey(p.getS3Key()) : p.getS3Key();
+                    String url = s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
 
                     return new MissionDetailDto(
                             p.getId(),
@@ -146,6 +174,7 @@ public class MissionCalendarService {
 
 
     // ===== helper =====
+
 
     private Long getPartnerId(Couple couple, Long myId) {
         if (couple.getMember1() != null && couple.getMember1().getId().equals(myId)) {
