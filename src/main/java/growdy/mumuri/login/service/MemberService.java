@@ -1,5 +1,6 @@
 package growdy.mumuri.login.service;
 
+import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.domain.Photo;
@@ -27,6 +28,7 @@ public class MemberService {
     private final ChatMessageRepository chatMessageRepository;
     private final CoupleMissionRepository coupleMissionRepository;
     private final CoupleMissionProgressRepository coupleMissionProgressRepository;
+    private final ScheduleRepository scheduleRepository;
     // private final AuthService authService; // refresh 토큰 날리고 싶으면 주입해서 사용
 
     /**
@@ -104,6 +106,7 @@ public class MemberService {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
+        // 1) 커플이면 커플 및 관련 데이터 삭제 + partner solo 처리
         Couple couple = coupleRepository
                 .findByMember1IdOrMember2Id(memberId, memberId)
                 .orElse(null);
@@ -111,74 +114,76 @@ public class MemberService {
         if (couple != null) {
             Long coupleId = couple.getId();
 
-            // ✅ 상대방 찾기
+            Member m1 = couple.getMember1();
+            Member m2 = couple.getMember2();
             Member partner = null;
-            if (couple.getMember1() != null && couple.getMember1().getId().equals(memberId)) {
-                partner = couple.getMember2();
-            } else if (couple.getMember2() != null && couple.getMember2().getId().equals(memberId)) {
-                partner = couple.getMember1();
-            }
 
-            // =========================
-            // 0) FK 끊기 (중요!!)
-            // =========================
+            if (m1 != null && m1.getId().equals(memberId)) partner = m2;
+            else if (m2 != null && m2.getId().equals(memberId)) partner = m1;
+
+            // ✅ (중요) 커플 삭제 전에 양쪽 member가 들고 있는 couple 참조를 끊어줘야 flush 때 안터짐
+            if (m1 != null) m1.setCouple(null);
+            if (m2 != null) m2.setCouple(null);
+            member.setCouple(null);
+
+            // mainPhoto가 커플 사진을 참조 중이면, 사진 삭제 시 FK/flush 이슈 생길 수 있어서 미리 끊기
             member.setMainPhoto(null);
             if (partner != null) partner.setMainPhoto(null);
 
-            // member 테이블 업데이트가 먼저 나가도록 flush (FK 때문에 중요)
+            // partner는 솔로로 복구
+            if (partner != null) {
+                partner.setStatus("solo");
+                partner.setCoupleCode(null);
+                partner.setAnniversary(null);
+                partner.setCouple(null);
+            }
+
+            // member도 커플 정보 끊기
+            member.setCoupleCode(null);
+            member.setAnniversary(null);
+
+            // partner 변경사항 먼저 flush (삭제 전에 영속성 컨텍스트 안정화)
+            if (partner != null) memberRepository.save(partner);
+            memberRepository.save(member);
             memberRepository.flush();
 
-            // =========================
-            // 1) 채팅방/메시지 삭제
-            // =========================
-            chatRoomRepository.findByCouple(couple).ifPresent(room -> {
+            // (선택이지만 권장) 커플 일정이 couple FK 물고 있어서 커플 삭제 전에 삭제
+            scheduleRepository.deleteByCoupleId(coupleId);
+
+            // 채팅방 + 채팅 메시지 삭제
+            ChatRoom room = chatRoomRepository.findByCouple(couple).orElse(null);
+            if (room != null) {
                 chatMessageRepository.deleteByChatRoomId(room.getId());
                 chatRoomRepository.delete(room);
-            });
+            }
 
-            // =========================
-            // 2) 미션 progress -> 미션 삭제
-            // =========================
+            // 미션/프로그레스 삭제
             List<Long> cmIds = coupleMissionRepository.findIdsByCoupleId(coupleId);
             if (!cmIds.isEmpty()) {
                 coupleMissionProgressRepository.deleteByCoupleMissionIdIn(cmIds);
             }
             coupleMissionRepository.deleteByCoupleId(coupleId);
 
-            // =========================
-            // 3) 사진 삭제 (FK 끊은 뒤!)
-            // =========================
+            // 사진 삭제
             photoRepository.deleteByCoupleId(coupleId);
 
-            // =========================
-            // 4) couple 삭제
-            // =========================
+            // 커플 삭제
             coupleRepository.delete(couple);
-
-            // ✅ 상대방은 솔로로 되돌리기 (추천)
-            if (partner != null) {
-                partner.setStatus("solo");
-                partner.setCoupleCode(null);
-                // partner.setAnniversary(null); // 정책에 따라 (커플 기념일을 member에 저장한다면 null 추천)
-            }
         }
 
-        // =========================
-        // 5) 탈퇴자 소프트 탈퇴 처리
-        // =========================
+        // 2) 탈퇴 처리 (soft delete)
         member.setDeleted(true);
         member.setStatus("deleted");
         member.setNickname("탈퇴한 사용자");
-        member.setCoupleCode(null);
-        // member.setAnniversary(null); // 정책에 따라
-
-        // email NOT NULL/UNIQUE 대비
         member.setEmail("deleted_" + memberId + "@mumuri.invalid");
-
-        // 재가입 허용이면 null
         member.setKakaoId(null);
-
         member.setProfileImageKey(null);
+        member.setMainPhoto(null);
+        member.setCoupleCode(null);
+        member.setAnniversary(null);
+        member.setCouple(null);
+
+        memberRepository.save(member);
     }
 
     @Transactional
