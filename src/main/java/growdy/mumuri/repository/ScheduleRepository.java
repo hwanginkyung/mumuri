@@ -11,9 +11,9 @@ import java.util.List;
 
 public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
 
-    List<Schedule> findByOwnerIdAndStartAtBetween(Long ownerId,
-                                                  LocalDateTime start,
-                                                  LocalDateTime end);
+    List<Schedule> findByOwnerIdAndCoupleIsNullAndStartAtBetween(Long ownerId,
+                                                                 LocalDateTime start,
+                                                                 LocalDateTime end);
 
     List<Schedule> findByCoupleIdAndStartAtBetween(Long coupleId,
                                                    LocalDateTime start,
