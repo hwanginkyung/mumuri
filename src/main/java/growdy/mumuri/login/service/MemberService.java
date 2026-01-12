@@ -5,6 +5,7 @@ import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.domain.Photo;
 import growdy.mumuri.dto.RegisterResult;
+import growdy.mumuri.login.dto.AppleUserInfo;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.*;
@@ -56,6 +57,45 @@ public class MemberService {
         Member saved = memberRepository.save(newUser);
         System.out.println("새 회원 저장됨: " + saved);
         return new RegisterResult(saved, true);
+    }
+
+    /**
+     * Apple 간편로그인 시, 기존 회원이면 그대로 반환, 없으면 신규 생성
+     */
+    @Transactional
+    public RegisterResult registerIfAbsent(AppleUserInfo userInfo) {
+        String appleId = userInfo.id();
+        if (appleId == null || appleId.isBlank()) {
+            throw new IllegalArgumentException("Apple user id is missing");
+        }
+
+        Optional<Member> existingUser = memberRepository.findByAppleId(appleId);
+        if (existingUser.isPresent()) {
+            System.out.println("기존 사용자 로그인(Apple): " + existingUser.get());
+            return new RegisterResult(existingUser.get(), false);
+        }
+
+        Member newUser = new Member();
+        newUser.setAppleId(appleId);
+        newUser.setEmail(userInfo.email());
+        newUser.setNickname(resolveAppleNickname(userInfo));
+        newUser.setStatus("solo");
+        newUser.setDeleted(false);
+
+        Member saved = memberRepository.save(newUser);
+        System.out.println("새 회원 저장됨(Apple): " + saved);
+        return new RegisterResult(saved, true);
+    }
+
+    private String resolveAppleNickname(AppleUserInfo userInfo) {
+        if (userInfo.name() != null && !userInfo.name().isBlank()) {
+            return userInfo.name();
+        }
+        if (userInfo.email() != null && !userInfo.email().isBlank()) {
+            int atIndex = userInfo.email().indexOf('@');
+            return atIndex > 0 ? userInfo.email().substring(0, atIndex) : userInfo.email();
+        }
+        return "AppleUser";
     }
 
     /**
@@ -177,6 +217,7 @@ public class MemberService {
         member.setNickname("탈퇴한 사용자");
         member.setEmail("deleted_" + memberId + "@mumuri.invalid");
         member.setKakaoId(null);
+        member.setAppleId(null);
         member.setProfileImageKey(null);
         member.setMainPhoto(null);
         member.setCoupleCode(null);

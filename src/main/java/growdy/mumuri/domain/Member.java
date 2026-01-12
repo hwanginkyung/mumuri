@@ -17,6 +17,7 @@ public class Member extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long kakaoId;
+    private String appleId;
     private String name;
     private String email;
     @JsonFormat(pattern = "yyyy.MM.dd")
