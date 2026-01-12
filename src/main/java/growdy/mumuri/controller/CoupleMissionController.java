@@ -3,6 +3,7 @@ package growdy.mumuri.controller;
 import growdy.mumuri.domain.CoupleMission;
 import growdy.mumuri.dto.CoupleMissionDto;
 import growdy.mumuri.dto.CoupleMissionHistoryDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.CoupleMissionService;
 import lombok.RequiredArgsConstructor;
@@ -24,9 +25,10 @@ public class CoupleMissionController {
 
     @GetMapping("/today")
     public List<CoupleMissionDto> today(@AuthenticationPrincipal CustomUserDetails user) {
-        List<CoupleMission> list = coupleMissionService.getTodayMissions(user.getId());
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        List<CoupleMission> list = coupleMissionService.getTodayMissions(authenticatedUser.getId());
         return list.stream()
-                .map(cm -> CoupleMissionDto.from(cm, user.getId())) // userId 전달!!
+                .map(cm -> CoupleMissionDto.from(cm, authenticatedUser.getId())) // userId 전달!!
                 .toList();
     }
 
@@ -34,7 +36,7 @@ public class CoupleMissionController {
     public ResponseEntity<Instant> completeMyPart(@PathVariable Long missionId,
                                                  @RequestParam("file") MultipartFile file,
                                                  @AuthenticationPrincipal CustomUserDetails user) {
-        Instant now= coupleMissionService.completeMyPart(user.getId(), missionId, file);
+        Instant now= coupleMissionService.completeMyPart(AuthGuard.requireUser(user).getId(), missionId, file);
         return ResponseEntity.ok(now);
     }
 
@@ -44,12 +46,12 @@ public class CoupleMissionController {
             @PathVariable Long missionId,
             @RequestParam String fileKey
     ) {
-        return coupleMissionService.completeWithKey(user.getId(), missionId, fileKey);
+        return coupleMissionService.completeWithKey(AuthGuard.requireUser(user).getId(), missionId, fileKey);
     }
 
     @GetMapping("/history")
     public List<CoupleMissionHistoryDto> history(@AuthenticationPrincipal CustomUserDetails user) {
-        return coupleMissionService.getMissionHistory(user.getId());
+        return coupleMissionService.getMissionHistory(AuthGuard.requireUser(user).getId());
     }
 
 }

@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.dto.MissionDaySummaryDto;
 import growdy.mumuri.dto.MissionDetailDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.service.MemberService;
 import growdy.mumuri.service.MissionCalendarService;
@@ -32,7 +33,7 @@ public class MissionCalendarController {
             @RequestParam int month
     ) {
         List<MissionDetailDto> res =
-                missionCalendarService.getMonthly(user.getId(), year, month);
+                missionCalendarService.getMonthly(AuthGuard.requireUser(user).getId(), year, month);
         return ResponseEntity.ok(res);
     }
 
@@ -46,7 +47,7 @@ public class MissionCalendarController {
             @RequestParam LocalDate date
     ) {
         List<MissionDetailDto> res =
-                missionCalendarService.getDaily(user.getId(), date);
+                missionCalendarService.getDaily(AuthGuard.requireUser(user).getId(), date);
         return ResponseEntity.ok(res);
     }
 
@@ -55,7 +56,7 @@ public class MissionCalendarController {
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam Long photoId
     ) {
-        memberService.setMainPhoto(user.getId(), photoId);
+        memberService.setMainPhoto(AuthGuard.requireUser(user).getId(), photoId);
         return ResponseEntity.ok().build();
     }
 

@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.*;
 import growdy.mumuri.dto.MainDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.repository.CoupleMissionProgressRepository;
 import growdy.mumuri.repository.CoupleMissionRepository;
@@ -31,9 +32,10 @@ public class HomeController {
     @Transactional
     @GetMapping("/user/main")
     public MainDto mainDto(@AuthenticationPrincipal CustomUserDetails user) {
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
 
         Couple couple = coupleRepository
-                .findByMember1IdOrMember2Id(user.getId(), user.getId())
+                .findByMember1IdOrMember2Id(authenticatedUser.getId(), authenticatedUser.getId())
                 .orElseThrow();
 
         long dday = dayService.getDday(couple.getId());

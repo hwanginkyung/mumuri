@@ -1,6 +1,7 @@
 package growdy.mumuri.controller;
 
 import growdy.mumuri.dto.MissionDetailDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.PhotoService;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,6 @@ public class GalleryController {
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestParam(defaultValue = "0") int page
     ) {
-        return ResponseEntity.ok(photoService.getGallery(user.getId(), page));
+        return ResponseEntity.ok(photoService.getGallery(AuthGuard.requireUser(user).getId(), page));
     }
 }

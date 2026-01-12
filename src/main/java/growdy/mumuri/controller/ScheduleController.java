@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.dto.ScheduleCreateRequest;
 import growdy.mumuri.dto.ScheduleResponse;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.ScheduleService;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class ScheduleController {
             @AuthenticationPrincipal CustomUserDetails user,
             @RequestBody ScheduleCreateRequest req
     ) {
-        ScheduleResponse res = scheduleService.create(user.getId(), req);
+        ScheduleResponse res = scheduleService.create(AuthGuard.requireUser(user).getId(), req);
         return ResponseEntity.ok(res);
 
     }
@@ -36,7 +37,7 @@ public class ScheduleController {
             @RequestParam int year,
             @RequestParam int month
     ) {
-        List<ScheduleResponse> res = scheduleService.getMonthly(user.getId(), year, month);
+        List<ScheduleResponse> res = scheduleService.getMonthly(AuthGuard.requireUser(user).getId(), year, month);
         return ResponseEntity.ok(res);
     }
 
@@ -46,7 +47,7 @@ public class ScheduleController {
             @AuthenticationPrincipal CustomUserDetails user,
             @PathVariable Long id
     ) {
-        scheduleService.delete(user.getId(), id);
+        scheduleService.delete(AuthGuard.requireUser(user).getId(), id);
         return ResponseEntity.noContent().build();
     }
 }
