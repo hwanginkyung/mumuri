@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 import growdy.mumuri.domain.ChatMessage;
 import growdy.mumuri.dto.*;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.ChatService;
 import lombok.RequiredArgsConstructor;
@@ -44,7 +45,7 @@ public class ChatController {
             @RequestParam(defaultValue = "50") int size,
             @AuthenticationPrincipal CustomUserDetails user
     ) {
-        Long viewerId = (user != null ? user.getId() : null);
+        Long viewerId = AuthGuard.requireUser(user).getId();
         return chatService.getHistory(roomId, cursor, size, viewerId);
     }
 }

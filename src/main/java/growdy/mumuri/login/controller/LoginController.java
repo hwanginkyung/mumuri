@@ -7,6 +7,7 @@ import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.LogoutRequest;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.AppleUserInfo;
 import growdy.mumuri.login.dto.KakaoUserInfo;
@@ -96,7 +97,7 @@ public class LoginController {
     }
     @DeleteMapping("/api/auth/withdraw")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
-        memberService.withdraw(user.getId()); // 또는 WithdrawalService
+        memberService.withdraw(AuthGuard.requireUser(user).getId()); // 또는 WithdrawalService
         return ResponseEntity.noContent().build();
     }
 

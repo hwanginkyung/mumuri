@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 
 import growdy.mumuri.dto.MyPageDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.MyPageService;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +19,7 @@ public class MyPageController {
     @GetMapping("/api/mypage")
     public ResponseEntity<MyPageDto> mypage(
             @AuthenticationPrincipal CustomUserDetails user){
-        MyPageDto mypages= myPageService.mypage(user);
+        MyPageDto mypages= myPageService.mypage(AuthGuard.requireUser(user));
         return ResponseEntity.ok(mypages);
     }
 }
