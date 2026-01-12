@@ -8,6 +8,7 @@ import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.dto.LogoutRequest;
 import growdy.mumuri.login.CustomUserDetails;
+import growdy.mumuri.login.dto.AppleUserInfo;
 import growdy.mumuri.login.dto.KakaoUserInfo;
 import growdy.mumuri.login.dto.LoginTest;
 import growdy.mumuri.login.jwt.JwtUtil;
@@ -15,6 +16,8 @@ import growdy.mumuri.login.service.MemberService;
 import growdy.mumuri.repository.ChatRoomRepository;
 import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.service.AuthService;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,7 +35,13 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.interfaces.ECPrivateKey;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Collections;
+import java.util.Date;
 
 @RestController
 @RequiredArgsConstructor
@@ -52,6 +61,21 @@ public class LoginController {
     @Value("${kakao.client-id}")
     private String clientId;
 
+    @Value("${apple.client-id}")
+    private String appleClientId;
+
+    @Value("${apple.redirect-uri}")
+    private String appleRedirectUri;
+
+    @Value("${apple.team-id}")
+    private String appleTeamId;
+
+    @Value("${apple.key-id}")
+    private String appleKeyId;
+
+    @Value("${apple.private-key}")
+    private String applePrivateKey;
+
 
     @GetMapping("/api/auth/kakao/login")
     public String redirectToKakao() {
@@ -59,6 +83,16 @@ public class LoginController {
                 + "&client_id=" + clientId
                 + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
         return "redirect:" + kakaoUrl;
+    }
+
+    @GetMapping("/api/auth/apple/login")
+    public String redirectToApple() {
+        String appleUrl = "https://appleid.apple.com/auth/authorize?response_type=code"
+                + "&client_id=" + appleClientId
+                + "&redirect_uri=" + URLEncoder.encode(appleRedirectUri, StandardCharsets.UTF_8)
+                + "&scope=name%20email"
+                + "&response_mode=form_post";
+        return "redirect:" + appleUrl;
     }
     @DeleteMapping("/api/auth/withdraw")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
@@ -150,6 +184,53 @@ public class LoginController {
         response.sendRedirect(deeplink.toString());
     }
 
+    @RequestMapping(value = "/api/auth/apple/callback", method = {RequestMethod.GET, RequestMethod.POST})
+    public void appleCallback(
+            @RequestParam String code,
+            HttpServletResponse response
+    ) throws IOException {
+        String appleIdToken = getAppleIdToken(code);
+        JsonNode appleTokenPayload = decodeAppleIdToken(appleIdToken);
+        AppleUserInfo appleUser = AppleUserInfo.from(appleTokenPayload);
+
+        var result = memberService.registerIfAbsent(appleUser);
+        Member member = result.member();
+        boolean isNew = member.getAnniversary() == null;
+
+        Couple couple = coupleRepository
+                .findByMember1IdOrMember2Id(member.getId(), member.getId())
+                .orElse(null);
+
+        ChatRoom chatRoom = (couple != null)
+                ? chatRoomRepository.findByCouple(couple).orElse(null)
+                : null;
+
+        Long roomId = (chatRoom != null) ? chatRoom.getId() : null;
+
+        var tokens = authService.issueTokens(member.getId(), null, null);
+        String accessToken = tokens.accessToken();
+        String refreshToken = tokens.refreshToken();
+
+        String email = member.getEmail();
+        String nickname = member.getNickname();
+
+        URI deeplink = UriComponentsBuilder
+                .newInstance()
+                .scheme("mumuri")
+                .path("oauth/apple")
+                .queryParam("accessToken", accessToken)
+                .queryParam("refreshToken", refreshToken)
+                .queryParam("email", email)
+                .queryParam("nickname", nickname)
+                .queryParam("status", member.getStatus())
+                .queryParam("roomId", roomId)
+                .queryParam("isNew", isNew)
+                .build(false)
+                .encode(StandardCharsets.UTF_8)
+                .toUri();
+        response.sendRedirect(deeplink.toString());
+    }
+
 
     private String getAccessToken(String code) throws JsonProcessingException {
 
@@ -220,5 +301,102 @@ public class LoginController {
                 String.class
         );
         return response.getBody(); // 사용자 정보 JSON
+    }
+
+    private String getAppleIdToken(String code) throws JsonProcessingException {
+        String tokenUrl = "https://appleid.apple.com/auth/token";
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        MultiValueMap<String, String> params = new LinkedMultiValueMap<>();
+        params.add("grant_type", "authorization_code");
+        params.add("client_id", appleClientId);
+        params.add("client_secret", createAppleClientSecret());
+        params.add("redirect_uri", appleRedirectUri);
+        params.add("code", code);
+
+        HttpEntity<MultiValueMap<String, String>> request = new HttpEntity<>(params, headers);
+        RestTemplate restTemplate = new RestTemplate();
+
+        try {
+            ResponseEntity<String> response =
+                    restTemplate.exchange(tokenUrl, HttpMethod.POST, request, String.class);
+
+            JsonNode json = objectMapper.readTree(response.getBody());
+            JsonNode idTokenNode = json.get("id_token");
+
+            if (idTokenNode == null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST, "Apple id_token이 응답에 없습니다."
+                );
+            }
+
+            return idTokenNode.asText();
+
+        } catch (HttpClientErrorException.TooManyRequests e) {
+            throw new ResponseStatusException(
+                    HttpStatus.TOO_MANY_REQUESTS,
+                    "Apple 요청이 너무 많습니다. 잠시 후 다시 시도해주세요."
+            );
+
+        } catch (HttpClientErrorException e) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Apple 인증 실패: " + e.getStatusCode()
+            );
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "서버 내부 오류 (Apple 토큰 요청 실패)"
+            );
+        }
+    }
+
+    private JsonNode decodeAppleIdToken(String idToken) throws JsonProcessingException {
+        String[] parts = idToken.split("\\.");
+        if (parts.length < 2) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Apple id_token 형식이 올바르지 않습니다."
+            );
+        }
+        String payload = new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8);
+        return objectMapper.readTree(payload);
+    }
+
+    private String createAppleClientSecret() {
+        Instant now = Instant.now();
+        Date issuedAt = Date.from(now);
+        Date expiresAt = Date.from(now.plusSeconds(300));
+
+        return Jwts.builder()
+                .setHeaderParam("kid", appleKeyId)
+                .setIssuer(appleTeamId)
+                .setAudience("https://appleid.apple.com")
+                .setSubject(appleClientId)
+                .setIssuedAt(issuedAt)
+                .setExpiration(expiresAt)
+                .signWith(getApplePrivateKey(), SignatureAlgorithm.ES256)
+                .compact();
+    }
+
+    private ECPrivateKey getApplePrivateKey() {
+        try {
+            String normalizedKey = applePrivateKey
+                    .replace("-----BEGIN PRIVATE KEY-----", "")
+                    .replace("-----END PRIVATE KEY-----", "")
+                    .replaceAll("\\s", "");
+            byte[] decoded = Base64.getDecoder().decode(normalizedKey);
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(decoded);
+            KeyFactory keyFactory = KeyFactory.getInstance("EC");
+            return (ECPrivateKey) keyFactory.generatePrivate(keySpec);
+        } catch (Exception e) {
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Apple private key 파싱 실패"
+            );
+        }
     }
 }
