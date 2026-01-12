@@ -88,7 +88,7 @@ public class ScheduleService {
 
         // 내 일정
         List<Schedule> mySchedules =
-                scheduleRepository.findByOwnerIdAndStartAtBetween(memberId, from, to);
+                scheduleRepository.findByOwnerIdAndCoupleIsNullAndStartAtBetween(memberId, from, to);
 
         // 커플 일정
         List<Schedule> coupleSchedules = new ArrayList<>();
@@ -101,7 +101,7 @@ public class ScheduleService {
         List<Schedule> partnerSchedules = new ArrayList<>();
         if (partnerId != null) {
             partnerSchedules = scheduleRepository
-                    .findByOwnerIdAndStartAtBetween(partnerId, from, to);
+                    .findByOwnerIdAndCoupleIsNullAndStartAtBetween(partnerId, from, to);
         }
 
         // 다 합치고 정렬 + 타입 계산
