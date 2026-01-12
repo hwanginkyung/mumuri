@@ -15,6 +15,10 @@ public interface ScheduleRepository extends JpaRepository<Schedule, Long> {
                                                                  LocalDateTime start,
                                                                  LocalDateTime end);
 
+    List<Schedule> findByOwnerIdAndStartAtBetween(Long ownerId,
+                                                  LocalDateTime start,
+                                                  LocalDateTime end);
+
     List<Schedule> findByCoupleIdAndStartAtBetween(Long coupleId,
                                                    LocalDateTime start,
                                                    LocalDateTime end);
