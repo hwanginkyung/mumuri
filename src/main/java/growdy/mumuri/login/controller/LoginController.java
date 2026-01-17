@@ -342,10 +342,12 @@ public class LoginController {
             );
 
         } catch (HttpClientErrorException e) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Apple 인증 실패: " + e.getStatusCode()
-            );
+            String errorBody = e.getResponseBodyAsString();
+            String message = "Apple 인증 실패: " + e.getStatusCode();
+            if (errorBody != null && !errorBody.isBlank()) {
+                message += " - " + errorBody;
+            }
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
 
         } catch (Exception e) {
             throw new ResponseStatusException(
