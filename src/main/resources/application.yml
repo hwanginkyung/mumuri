@@ -44,6 +44,10 @@ apple:
   key-id: ${APPLE_KEY_ID}
   private-key: ${APPLE_PRIVATE_KEY}
 
+app:
+  init:
+    truncate: false
+
 cloud:
   aws:
     credentials:

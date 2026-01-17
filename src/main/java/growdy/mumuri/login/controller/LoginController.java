@@ -87,13 +87,15 @@ public class LoginController {
     }
 
     @GetMapping("/api/auth/apple/login")
-    public String redirectToApple() {
+    public ResponseEntity<Void> redirectToApple() {
         String appleUrl = "https://appleid.apple.com/auth/authorize?response_type=code"
                 + "&client_id=" + appleClientId
                 + "&redirect_uri=" + URLEncoder.encode(appleRedirectUri, StandardCharsets.UTF_8)
                 + "&scope=name%20email"
                 + "&response_mode=form_post";
-        return "redirect:" + appleUrl;
+        return ResponseEntity.status(HttpStatus.FOUND)
+                .location(URI.create(appleUrl))
+                .build();
     }
     @DeleteMapping("/api/auth/withdraw")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {

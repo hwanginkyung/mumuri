@@ -6,6 +6,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -28,9 +29,15 @@ public class DatabaseInitializer {
     @PersistenceContext
     private EntityManager em;
 
+    @Value("${app.init.truncate:false}")
+    private boolean truncateEnabled;
+
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void resetDatabaseExceptMissions() {
+        if (!truncateEnabled) {
+            return;
+        }
 
         em.createNativeQuery("SET FOREIGN_KEY_CHECKS = 0").executeUpdate();
 
@@ -48,4 +55,3 @@ public class DatabaseInitializer {
     }
 
 }
-
