@@ -18,6 +18,7 @@ import growdy.mumuri.repository.CoupleRepository;
 import growdy.mumuri.service.AuthService;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -91,6 +92,7 @@ public class LoginController {
 
     @GetMapping("/api/auth/apple/login")
     public String redirectToApple() {
+        log.info("Apple authorize redirect: clientId={} redirectUri={}", appleClientId, appleRedirectUri);
         String appleUrl = "https://appleid.apple.com/auth/authorize?response_type=code"
                 + "&client_id=" + appleClientId
                 + "&redirect_uri=" + URLEncoder.encode(appleRedirectUri, StandardCharsets.UTF_8)
@@ -190,9 +192,30 @@ public class LoginController {
 
     @RequestMapping(value = "/api/auth/apple/callback", method = {RequestMethod.GET, RequestMethod.POST})
     public void appleCallback(
-            @RequestParam String code,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String error,
+            @RequestParam(name = "error_description", required = false) String errorDescription,
+            HttpServletRequest request,
             HttpServletResponse response
     ) throws IOException {
+        log.info(
+                "Apple callback: method={} hasCode={} error={} errorDescriptionPresent={}",
+                request.getMethod(),
+                code != null && !code.isBlank(),
+                error,
+                errorDescription != null && !errorDescription.isBlank()
+        );
+        if (error != null && !error.isBlank()) {
+            String message = "Apple 인증 실패: " + error;
+            if (errorDescription != null && !errorDescription.isBlank()) {
+                message += " - " + errorDescription;
+            }
+            log.warn("Apple callback error: {} {}", error, errorDescription);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+        }
+        if (code == null || code.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Apple authorization code가 없습니다.");
+        }
         log.info("Apple callback received with code length={}", code != null ? code.length() : 0);
         String appleIdToken = getAppleIdToken(code);
         JsonNode appleTokenPayload = decodeAppleIdToken(appleIdToken);
