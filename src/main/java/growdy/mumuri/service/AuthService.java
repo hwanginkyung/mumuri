@@ -4,9 +4,11 @@ import growdy.mumuri.domain.Member;
 import growdy.mumuri.domain.RefreshToken;
 import growdy.mumuri.login.dto.TokenResponse;
 import growdy.mumuri.login.jwt.JwtUtil;
-import growdy.mumuri.login.repository.MemberRepository;
 import growdy.mumuri.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +17,8 @@ import java.time.Instant;
 @Service
 @RequiredArgsConstructor
 public class AuthService {
+
+    private static final Logger log = LoggerFactory.getLogger(AuthService.class);
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
@@ -78,5 +82,11 @@ public class AuthService {
     public void revokeAllForMember(Long memberId) {
         refreshTokenRepository.deleteByMemberId(memberId);
     }
-}
 
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void purgeExpiredRefreshTokens() {
+        refreshTokenRepository.deleteByExpiryAtBefore(Instant.now());
+        log.debug("Purged expired refresh tokens.");
+    }
+}
