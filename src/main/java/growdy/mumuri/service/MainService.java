@@ -163,7 +163,7 @@ public class MainService {
     }
 
     private boolean shouldShowMainPhoto(MissionStatus status) {
-        return status == null || status == MissionStatus.HALF_DONE;
+        return status == null || status == MissionStatus.HALF_DONE || status == MissionStatus.COMPLETED;
     }
 
     private String resolveMainPhotoKey(Photo mainPhoto, Long uploaderId, Long viewerId, MissionStatus status) {
