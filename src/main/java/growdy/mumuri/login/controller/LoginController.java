@@ -351,6 +351,7 @@ public class LoginController {
             if (errorBody != null && !errorBody.isBlank()) {
                 message += " - " + errorBody;
             }
+            log.warn("Apple token request failed: status={} body={}", e.getStatusCode(), errorBody);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
 
         } catch (Exception e) {
