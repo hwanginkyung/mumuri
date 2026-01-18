@@ -189,10 +189,22 @@ public class LoginController {
 
     @RequestMapping(value = "/api/auth/apple/callback", method = {RequestMethod.GET, RequestMethod.POST})
     public void appleCallback(
-            @RequestParam String code,
+            @RequestParam(required = false) String code,
+            @RequestBody(required = false) AppleCallbackRequest request,
             HttpServletResponse response
     ) throws IOException {
-        String appleIdToken = getAppleIdToken(code);
+        String authorizationCode = (code != null && !code.isBlank())
+                ? code
+                : (request != null ? request.code() : null);
+
+        if (authorizationCode == null || authorizationCode.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Apple 인증 code 파라미터가 필요합니다."
+            );
+        }
+
+        String appleIdToken = getAppleIdToken(authorizationCode);
         JsonNode appleTokenPayload = decodeAppleIdToken(appleIdToken);
         AppleUserInfo appleUser = AppleUserInfo.from(appleTokenPayload);
 
@@ -403,5 +415,8 @@ public class LoginController {
                     "Apple private key 파싱 실패"
             );
         }
+    }
+
+    private record AppleCallbackRequest(String code) {
     }
 }
