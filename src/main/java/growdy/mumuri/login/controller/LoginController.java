@@ -94,7 +94,8 @@ public class LoginController {
         String appleUrl = "https://appleid.apple.com/auth/authorize?response_type=code"
                 + "&client_id=" + appleClientId
                 + "&redirect_uri=" + URLEncoder.encode(appleRedirectUri, StandardCharsets.UTF_8)
-                + "&scope=name%20email";
+                + "&scope=name%20email"
+                + "&response_mode=form_post";
         return "redirect:" + appleUrl;
     }
     @DeleteMapping("/api/auth/withdraw")
@@ -187,7 +188,7 @@ public class LoginController {
         response.sendRedirect(deeplink.toString());
     }
 
-    @GetMapping("/api/auth/apple/callback")
+    @RequestMapping(value = "/api/auth/apple/callback", method = {RequestMethod.GET, RequestMethod.POST})
     public void appleCallback(
             @RequestParam String code,
             HttpServletResponse response
