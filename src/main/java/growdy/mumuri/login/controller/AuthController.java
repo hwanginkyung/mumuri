@@ -1,6 +1,7 @@
 package growdy.mumuri.login.controller;
 
 import growdy.mumuri.dto.LogoutRequest;
+import growdy.mumuri.dto.RefreshRequest;
 import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.TokenResponse;
@@ -18,8 +19,8 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/refresh")
-    public ResponseEntity<TokenResponse> refresh(@RequestParam String refreshToken) {
-        TokenResponse res = authService.refresh(refreshToken);
+    public ResponseEntity<TokenResponse> refresh(@RequestBody RefreshRequest request) {
+        TokenResponse res = authService.refresh(request.refreshToken());
         return ResponseEntity.ok(res);
     }
 
