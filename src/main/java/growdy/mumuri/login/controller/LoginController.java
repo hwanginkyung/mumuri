@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import growdy.mumuri.domain.ChatRoom;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
-import growdy.mumuri.dto.LogoutRequest;
 import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.AppleUserInfo;
@@ -87,15 +86,12 @@ public class LoginController {
     }
 
     @GetMapping("/api/auth/apple/login")
-    public ResponseEntity<Void> redirectToApple() {
+    public String redirectToApple() {
         String appleUrl = "https://appleid.apple.com/auth/authorize?response_type=code"
                 + "&client_id=" + appleClientId
                 + "&redirect_uri=" + URLEncoder.encode(appleRedirectUri, StandardCharsets.UTF_8)
-                + "&scope=name%20email"
-                + "&response_mode=form_post";
-        return ResponseEntity.status(HttpStatus.FOUND)
-                .location(URI.create(appleUrl))
-                .build();
+                + "&scope=name%20email";
+        return "redirect:" + appleUrl;
     }
     @DeleteMapping("/api/auth/withdraw")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
@@ -187,24 +183,12 @@ public class LoginController {
         response.sendRedirect(deeplink.toString());
     }
 
-    @RequestMapping(value = "/api/auth/apple/callback", method = {RequestMethod.GET, RequestMethod.POST})
+    @GetMapping("/api/auth/apple/callback")
     public void appleCallback(
-            @RequestParam(required = false) String code,
-            @RequestBody(required = false) AppleCallbackRequest request,
+            @RequestParam String code,
             HttpServletResponse response
     ) throws IOException {
-        String authorizationCode = (code != null && !code.isBlank())
-                ? code
-                : (request != null ? request.code() : null);
-
-        if (authorizationCode == null || authorizationCode.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Apple 인증 code 파라미터가 필요합니다."
-            );
-        }
-
-        String appleIdToken = getAppleIdToken(authorizationCode);
+        String appleIdToken = getAppleIdToken(code);
         JsonNode appleTokenPayload = decodeAppleIdToken(appleIdToken);
         AppleUserInfo appleUser = AppleUserInfo.from(appleTokenPayload);
 
@@ -417,6 +401,4 @@ public class LoginController {
         }
     }
 
-    private record AppleCallbackRequest(String code) {
-    }
 }
