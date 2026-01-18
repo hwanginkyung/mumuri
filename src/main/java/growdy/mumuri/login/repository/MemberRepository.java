@@ -10,6 +10,6 @@ import java.util.Optional;
         Optional<Member> findByCoupleCodeAndStatusAndIdNot(String coupleCode, String status, Long excludeId);
         boolean existsByCoupleCode(String coupleCode);
         Optional<Member> findByKakaoId(Long kakaoId);
+        Optional<Member> findByAppleId(String appleId);
     }
-
 

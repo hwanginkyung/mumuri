@@ -2,6 +2,7 @@ package growdy.mumuri.domain;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +17,7 @@ public class Member extends BaseEntity{
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private Long kakaoId;
+    private String appleId;
     private String name;
     private String email;
     @JsonFormat(pattern = "yyyy.MM.dd")
@@ -27,10 +29,15 @@ public class Member extends BaseEntity{
     private String status = "solo";
     private String password;
     @OneToOne(mappedBy = "member1")
+    @JsonIgnore
     private Couple couple;
     private String coupleCode;
     private boolean deleted = false;
 /*    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL)
     private List<Photo> photos;*/
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "main_photo_id") // nullable
+    private Photo mainPhoto;
+    private String profileImageKey;
 
 }

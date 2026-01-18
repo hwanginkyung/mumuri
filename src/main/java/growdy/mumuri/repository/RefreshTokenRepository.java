@@ -3,6 +3,7 @@ package growdy.mumuri.repository;
 import growdy.mumuri.domain.RefreshToken;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.Instant;
 import java.util.Optional;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long> {
@@ -12,5 +13,6 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     void deleteByMemberId(Long memberId);
 
     void deleteByToken(String token);
-}
 
+    void deleteByExpiryAtBefore(Instant now);
+}

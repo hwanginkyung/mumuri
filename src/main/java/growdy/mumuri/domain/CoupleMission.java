@@ -1,12 +1,12 @@
 package growdy.mumuri.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +20,11 @@ public class CoupleMission extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JsonIgnore
     private Couple couple;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JsonIgnore // 직렬화에서 제외
     private Mission mission;
 
     @Column(nullable = false)

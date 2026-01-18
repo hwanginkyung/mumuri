@@ -3,6 +3,7 @@ package growdy.mumuri.controller;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.domain.Member;
 import growdy.mumuri.domain.Test;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.login.dto.CoupleMatchDto;
 import growdy.mumuri.login.repository.MemberRepository;
@@ -42,7 +43,7 @@ public class UserController {
     @PostMapping("/name")
     public ResponseEntity<String> UpdateName(@AuthenticationPrincipal CustomUserDetails user,
                                @RequestParam String name) {
-        Long memberId= user.getId();
+        Long memberId= AuthGuard.requireUser(user).getId();
         userSettingService.updateMemberName(memberId, name);
         return ResponseEntity.ok(name);
     }
@@ -50,14 +51,14 @@ public class UserController {
     @PostMapping("/birthday")
     public ResponseEntity<String> UpdateBirthday(@AuthenticationPrincipal CustomUserDetails user,
                                                  @RequestParam LocalDate birthday) {
-        Long memberId= user.getId();
+        Long memberId= AuthGuard.requireUser(user).getId();
         userSettingService.updateMemberBirthday(memberId, birthday);
         return ResponseEntity.ok(birthday.toString());
     }
     @PostMapping("/anniversary")
     public ResponseEntity<String> updateAnniversary(@AuthenticationPrincipal CustomUserDetails user,
                                                     @RequestParam LocalDate anniversary) {
-        Long memberId = user.getId();
+        Long memberId = AuthGuard.requireUser(user).getId();
         userSettingService.updateMemberAnniversary(memberId, anniversary);
         Member member = memberRepository.findById(memberId).orElse(null);
         String code= member.getCoupleCode();
@@ -71,7 +72,7 @@ public class UserController {
      */
     @GetMapping("/couple/code")
     public ResponseEntity<String> getOrCreateCoupleCode(@AuthenticationPrincipal CustomUserDetails user) {
-        Member member = memberRepository.findById(user.getId())
+        Member member = memberRepository.findById(AuthGuard.requireUser(user).getId())
                 .orElseThrow(() -> new IllegalArgumentException("Member not found"));
 
         if (member.getCoupleCode() == null) {
@@ -85,32 +86,33 @@ public class UserController {
 
     @GetMapping("/coupletest")
     public String coupleTest(@AuthenticationPrincipal CustomUserDetails user){
-        Member member = memberRepository.findById(user.getId()).orElse(null);
+        Member member = memberRepository.findById(AuthGuard.requireUser(user).getId()).orElse(null);
         log.info("couplecode : {}", member.getCoupleCode() );
         return member.getCoupleCode();
     }
     @PostMapping("/couple")
     public ResponseEntity<CoupleMatchDto> makeCouple(@AuthenticationPrincipal CustomUserDetails user,
                                                      @RequestParam String coupleCode) {
-        coupleService.checkAndSetCouple(user.getId(), coupleCode);
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        coupleService.checkAndSetCouple(authenticatedUser.getId(), coupleCode);
         Couple couple = coupleRepository
-                .findByMember1IdOrMember2Id(user.getId(), user.getId())
+                .findByMember1IdOrMember2Id(authenticatedUser.getId(), authenticatedUser.getId())
                 .orElseThrow(() -> new IllegalStateException("Couple not found after match"));
 
         return ResponseEntity.ok(new CoupleMatchDto("Couple matched successfully", couple.getId()));
     }
     @GetMapping("/couple/already")
     public ResponseEntity<String> CheckCouple(@AuthenticationPrincipal CustomUserDetails user) {
-        return ResponseEntity.ok(coupleService.check(user.getUser()));
+        return ResponseEntity.ok(coupleService.check(AuthGuard.requireUser(user).getUser()));
     }
     @GetMapping("/getuser")
     public Long getUser(@AuthenticationPrincipal CustomUserDetails user) {
-        return user.getId();
+        return AuthGuard.requireUser(user).getId();
     }
     @DeleteMapping("/users/me")
     public ResponseEntity<Void> withdraw(@AuthenticationPrincipal CustomUserDetails user) {
 
-        Long memberId = user.getId();
+        Long memberId = AuthGuard.requireUser(user).getId();
         memberService.withdraw(memberId);
 
         // 프론트에서는 이 응답 받으면

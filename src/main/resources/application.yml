@@ -16,6 +16,8 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
+        jdbc:
+          time_zone: Asia/Seoul
 
 logging:
   level:
@@ -34,6 +36,17 @@ jwt:
 kakao:
   client-id: ${KAKAO_CLIENT_ID}
   redirect-uri: ${KAKAO_REDIRECT_URI}
+
+apple:
+  client-id: ${APPLE_CLIENT_ID}
+  redirect-uri: ${APPLE_REDIRECT_URI}
+  team-id: ${APPLE_TEAM_ID}
+  key-id: ${APPLE_KEY_ID}
+  private-key: ${APPLE_PRIVATE_KEY}
+
+app:
+  init:
+    truncate: false
 
 cloud:
   aws:

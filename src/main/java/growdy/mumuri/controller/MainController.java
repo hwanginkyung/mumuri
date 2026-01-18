@@ -2,6 +2,7 @@ package growdy.mumuri.controller;
 
 
 import growdy.mumuri.dto.HomeDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.MainService;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class MainController {
     private final MainService mainService;
     @GetMapping("/home/main")
     public ResponseEntity<HomeDto> homeDto(@AuthenticationPrincipal CustomUserDetails user) {
-        HomeDto home= mainService.getHome(user);
+        HomeDto home= mainService.getHome(AuthGuard.requireUser(user));
         return ResponseEntity.ok(home);
     }
 }

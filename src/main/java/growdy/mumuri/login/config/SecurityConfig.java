@@ -30,15 +30,15 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        /*.requestMatchers("/ws-chat/**","/app/**",       // 메시지 전송용 STOMP
+                        .requestMatchers("/ws-chat/**","/app/**",       // 메시지 전송용 STOMP
                                 "/topic/**",     // 메시지 구독용 STOMP
                                 "/error"         // 오류 페이지 접근
                         ).permitAll()
-                        .requestMatchers("/h2-console/**","/api/auth/**","/v3/api-docs/**","/swagger-ui/**","/actuator/prometheus",
+                        .requestMatchers("/h2-console/**","/api/auth/**","/auth/**","/v3/api-docs/**","/swagger-ui/**","/actuator/prometheus",
                                 "/swagger-ui.html","/api/auth/kakao/**", "/login/**", "/css/**", "/js/**","/login").permitAll()
-                        .anyRequest().authenticated()*/
-                        .anyRequest().permitAll()
+                        .anyRequest().authenticated()
                 )
+                .anonymous(anonymous -> anonymous.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 )
@@ -50,7 +50,15 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         //
         // config.setAllowedOrigins(List.of("*"));
-        config.setAllowedOriginPatterns(List.of("https://auth.expo.io","http://localhost:9090","http://mumuri.shop","http://localhost:8080","https://mumuri.shop"));
+        config.setAllowedOriginPatterns(List.of(
+                "https://auth.expo.io",
+                "http://localhost:9090",
+                "http://mumuri.shop",
+                "http://localhost:8080",
+                "https://mumuri.shop",
+                "https://appleid.apple.com",
+                "https://kauth.kakao.com"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

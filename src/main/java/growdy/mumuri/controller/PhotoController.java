@@ -1,6 +1,7 @@
 package growdy.mumuri.controller;
 import growdy.mumuri.domain.Couple;
 import growdy.mumuri.dto.PhotoResponseDto;
+import growdy.mumuri.login.AuthGuard;
 import growdy.mumuri.login.CustomUserDetails;
 import growdy.mumuri.service.CoupleService;
 import growdy.mumuri.service.PhotoService;
@@ -21,11 +22,11 @@ public class PhotoController {
     public ResponseEntity<String> uploadPhoto(
             @PathVariable long couple_id,
             @RequestParam("file") MultipartFile file,
+            @RequestParam Long missionId,
             @AuthenticationPrincipal CustomUserDetails user
-            ){
-        Long test=(long) -1 ;
-        photoService.uploadPhoto(couple_id, file, user.getId(),test);
-        return ResponseEntity.ok("photo updated successfully");
+    ){
+        String fileKey = photoService.uploadPhoto(couple_id, file, AuthGuard.requireUser(user).getId(), missionId);
+        return ResponseEntity.ok(fileKey);
     }
     @GetMapping("/photo/{couple_id}/{photo_id}")
     public PhotoResponseDto getPhoto(
@@ -33,6 +34,7 @@ public class PhotoController {
             @PathVariable long photo_id,
             @AuthenticationPrincipal CustomUserDetails user
     ){
+        AuthGuard.requireUser(user);
         return photoService.getOne(photo_id,couple_id);
     }
     @GetMapping("/photo/{couple_id}/all")
@@ -40,6 +42,7 @@ public class PhotoController {
             @PathVariable long couple_id,
             @AuthenticationPrincipal CustomUserDetails user
     ){
+        AuthGuard.requireUser(user);
         return photoService.listByCouple(couple_id);
     }
     @DeleteMapping("/delete/{couple_id}/{photo_id}")
@@ -48,27 +51,31 @@ public class PhotoController {
             @PathVariable long photo_id,
             @AuthenticationPrincipal CustomUserDetails user
     ){
+        AuthGuard.requireUser(user);
         photoService.delete(photo_id,couple_id,true);
         return ResponseEntity.ok("삭제 완");
     }
     @PostMapping("/test")
     public long test(@AuthenticationPrincipal CustomUserDetails user){
-        Couple couple = coupleService.test(user.getUser());
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        Couple couple = coupleService.test(authenticatedUser.getUser());
         log.info("couple_id :{}", couple.getId());
-        log.info("user_id : {}",user.getId());
+        log.info("user_id : {}",authenticatedUser.getId());
         return couple.getId();
     }
     @PostMapping("/test/already")
     public long testAlready(@AuthenticationPrincipal CustomUserDetails user){
-        Couple couple = coupleService.test(user.getUser());
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        Couple couple = coupleService.test(authenticatedUser.getUser());
         log.info("couple_id :{}", couple.getId());
-        log.info("user_id : {}",user.getId());
+        log.info("user_id : {}",authenticatedUser.getId());
         return couple.getId();
     }
     @PostMapping("/test/go")
     public String testGo(@AuthenticationPrincipal CustomUserDetails user){
-        String code= coupleService.newcode(user.getUser());
-        log.info("user_id : {}",user.getId());
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        String code= coupleService.newcode(authenticatedUser.getUser());
+        log.info("user_id : {}",authenticatedUser.getId());
         return code;
     }
 
