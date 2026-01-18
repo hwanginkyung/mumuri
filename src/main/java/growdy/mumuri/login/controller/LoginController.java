@@ -20,6 +20,8 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -46,6 +48,8 @@ import java.util.Date;
 @RestController
 @RequiredArgsConstructor
 public class LoginController {
+
+    private static final Logger log = LoggerFactory.getLogger(LoginController.class);
 
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
@@ -188,6 +192,7 @@ public class LoginController {
             @RequestParam String code,
             HttpServletResponse response
     ) throws IOException {
+        log.info("Apple callback received with code length={}", code != null ? code.length() : 0);
         String appleIdToken = getAppleIdToken(code);
         JsonNode appleTokenPayload = decodeAppleIdToken(appleIdToken);
         AppleUserInfo appleUser = AppleUserInfo.from(appleTokenPayload);
