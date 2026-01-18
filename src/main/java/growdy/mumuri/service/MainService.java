@@ -18,6 +18,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
@@ -85,29 +86,42 @@ public class MainService {
             Photo mainPhoto = me.getMainPhoto();
 
             if (mainPhoto != null && !mainPhoto.isDeleted()) {
-                Long uploaderId = mainPhoto.getUploadedBy();
+                MissionStatus missionStatus = getMissionStatus(coupleId, mainPhoto);
+                boolean showOnHome = shouldShowMainPhoto(missionStatus);
+                if (showOnHome) {
+                    Long uploaderId = mainPhoto.getUploadedBy();
 
-                MissionOwnerType uploaderType =
-                        (uploaderId != null && uploaderId.equals(me.getId()))
-                                ? MissionOwnerType.ME
-                                : MissionOwnerType.PARTNER;
+                    MissionOwnerType uploaderType =
+                            (uploaderId != null && uploaderId.equals(me.getId()))
+                                    ? MissionOwnerType.ME
+                                    : MissionOwnerType.PARTNER;
 
-                String uploaderNickname = "알 수 없음";
-                if (uploaderId != null) {
-                    uploaderNickname = memberRepository.findById(uploaderId)
-                            .map(Member::getName)
-                            .orElse("알 수 없음");
+                    String uploaderNickname = "알 수 없음";
+                    if (uploaderId != null) {
+                        uploaderNickname = memberRepository.findById(uploaderId)
+                                .map(Member::getName)
+                                .orElse("알 수 없음");
+                    }
+
+                    String keyToExpose = resolveMainPhotoKey(mainPhoto, uploaderId, me.getId(), missionStatus);
+                    String url = s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(30));
+
+                    mainPhotoDto = new HomeDto.MainPhotoDto(
+                            mainPhoto.getId(),
+                            url,
+                            uploaderType,
+                            uploaderNickname,
+                            mainPhoto.getCreatedAt()
+                    );
+                } else {
+                    mainPhotoDto = new HomeDto.MainPhotoDto(
+                            null,
+                            null,
+                            null,
+                            null,
+                            null
+                    );
                 }
-
-                String url = s3Upload.presignedGetUrl(mainPhoto.getS3Key(), Duration.ofMinutes(30));
-
-                mainPhotoDto = new HomeDto.MainPhotoDto(
-                        mainPhoto.getId(),
-                        url,
-                        uploaderType,
-                        uploaderNickname,
-                        mainPhoto.getCreatedAt()
-                );
             }
             else{
                 mainPhotoDto = new HomeDto.MainPhotoDto(
@@ -134,5 +148,27 @@ public class MainService {
         );
     }
 
+    private MissionStatus getMissionStatus(Long coupleId, Photo mainPhoto) {
+        if (mainPhoto.getMissionId() == null) {
+            return null;
+        }
+
+        LocalDate missionDate = mainPhoto.getCreatedAt().toLocalDate();
+        return coupleMissionRepository.findByCoupleIdAndMissionDate(coupleId, missionDate)
+                .stream()
+                .filter(cm -> Objects.equals(cm.getMission().getId(), mainPhoto.getMissionId()))
+                .map(CoupleMission::getStatus)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private boolean shouldShowMainPhoto(MissionStatus status) {
+        return status == null || status == MissionStatus.HALF_DONE;
+    }
+
+    private String resolveMainPhotoKey(Photo mainPhoto, Long uploaderId, Long viewerId, MissionStatus status) {
+        boolean shouldBlur = status == MissionStatus.HALF_DONE && !Objects.equals(uploaderId, viewerId);
+        return shouldBlur ? growdy.mumuri.util.BlurKeyUtil.toBlurKey(mainPhoto.getS3Key()) : mainPhoto.getS3Key();
+    }
 
 }
