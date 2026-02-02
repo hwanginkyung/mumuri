@@ -19,15 +19,26 @@ public record CoupleMissionDto(
         boolean myDone,
         Instant myCompletedAt
 ) {
+    private static final String BLUR_MESSAGE = "상대방이 보낸 사진을 보려면 먼저 같은 미션을 수행해야 해요.";
     public static CoupleMissionDto from(CoupleMission cm, Long userId) {
 
         List<UserProgressDto> ps = cm.getProgresses().stream()
-                .map(p -> new UserProgressDto(
-                        p.getUserId(),
-                        p.getStatus(),
-                        p.getPhotoUrl(),
-                        p.getCompletedAt()
-                ))
+                .map(p -> {
+                    boolean shouldBlurForViewer =
+                            cm.getStatus() == MissionStatus.HALF_DONE
+                                    && p.getStatus() == ProgressStatus.DONE
+                                    && p.getUserId() != null
+                                    && !p.getUserId().equals(userId);
+
+                    return new UserProgressDto(
+                            p.getUserId(),
+                            p.getStatus(),
+                            p.getPhotoUrl(),
+                            p.getCompletedAt(),
+                            shouldBlurForViewer,
+                            shouldBlurForViewer ? BLUR_MESSAGE : null
+                    );
+                })
                 .toList();
 
         Optional<CoupleMissionProgress> myProgressOpt = cm.getProgresses().stream()
