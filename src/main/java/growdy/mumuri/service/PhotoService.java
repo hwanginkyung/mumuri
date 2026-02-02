@@ -32,6 +32,7 @@ public class PhotoService {
     private final S3Upload s3Upload;
     private final MemberRepository memberRepository;
     private final CoupleMissionRepository coupleMissionRepository;
+    private static final String BLUR_MESSAGE = "상대방이 보낸 사진을 보려면 먼저 같은 미션을 수행해야 해요.";
 
     private record MissionKey(LocalDate date, Long missionId) {}
     public String uploadPhoto(Long coupleId, MultipartFile file, Long userId, Long missionId) {
@@ -160,11 +161,12 @@ public class PhotoService {
                     nickname,
                     p.getCreatedAt(),
                     url,
-                    p.getDescription()
+                    p.getDescription(),
+                    shouldBlur,
+                    shouldBlur ? BLUR_MESSAGE : null
             );
         });
     }
 
 
 }
-
