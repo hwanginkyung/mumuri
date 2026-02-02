@@ -13,4 +13,6 @@ public class PhotoResponseDto {
     private String presignedUrl; // 프론트에서 바로 <img src> 가능
     private Long uploadedBy;
     private LocalDateTime createdAt;
+    private boolean blurred;
+    private String blurMessage;
 }
