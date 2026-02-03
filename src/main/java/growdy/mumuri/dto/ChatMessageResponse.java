@@ -12,14 +12,16 @@ public record ChatMessageResponse(
         String senderName,
         String message,
         String imageUrl,
+        boolean blurred,
+        String blurMessage,
         boolean isRead,
         LocalDateTime createdAt,
         Long missionHistoryId
 ) {
     public static ChatMessageResponse from(ChatMessage m) {
-        return from(m, m.getImageUrl());
+        return from(m, m.getImageUrl(), false, null);
     }
-    public static ChatMessageResponse from(ChatMessage m, String resolvedImageUrl) {
+    public static ChatMessageResponse from(ChatMessage m, String resolvedImageUrl, boolean blurred, String blurMessage) {
         return new ChatMessageResponse(
                 m.getId(),
                 m.getType().name(),
@@ -27,6 +29,8 @@ public record ChatMessageResponse(
                 m.getSender().getName(),
                 m.getMessage(),
                 resolvedImageUrl,
+                blurred,
+                blurMessage,
                 m.isRead(),
                 m.getCreatedAt(),
                 m.getMissionHistoryId()
