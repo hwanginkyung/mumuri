@@ -34,16 +34,16 @@ public class PhotoController {
             @PathVariable long photo_id,
             @AuthenticationPrincipal CustomUserDetails user
     ){
-        AuthGuard.requireUser(user);
-        return photoService.getOne(photo_id,couple_id);
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        return photoService.getOne(couple_id, photo_id, authenticatedUser.getId());
     }
     @GetMapping("/photo/{couple_id}/all")
     public List<PhotoResponseDto> gallery(
             @PathVariable long couple_id,
             @AuthenticationPrincipal CustomUserDetails user
     ){
-        AuthGuard.requireUser(user);
-        return photoService.listByCouple(couple_id);
+        CustomUserDetails authenticatedUser = AuthGuard.requireUser(user);
+        return photoService.listByCouple(couple_id, authenticatedUser.getId());
     }
     @DeleteMapping("/delete/{couple_id}/{photo_id}")
     public ResponseEntity<String> deletePhoto(

@@ -35,6 +35,7 @@ public class ChatService {
     private final MemberRepository memberRepository;
     private final S3Upload s3Upload;
     private final CoupleMissionRepository coupleMissionRepository;
+    private static final String BLUR_MESSAGE = "상대방이 보낸 사진을 보려면 먼저 같은 미션을 수행해야 해요.";
 
     public ChatMessage saveMessage(ChatMessageDto dto) {
         Member sender = memberRepository.findById(dto.getSenderId())
@@ -81,7 +82,15 @@ public class ChatService {
 
         List<ChatMessageResponse> messages = slice.getContent().stream()
                 .sorted(Comparator.comparing(ChatMessage::getId))
-                .map(m -> ChatMessageResponse.from(m, resolveImageUrl(m, viewerId, statusByMissionId)))
+                .map(m -> {
+                    boolean shouldBlurForViewer = shouldBlurForViewer(m, viewerId, statusByMissionId);
+                    return ChatMessageResponse.from(
+                            m,
+                            resolveImageUrl(m, shouldBlurForViewer),
+                            shouldBlurForViewer,
+                            shouldBlurForViewer ? BLUR_MESSAGE : null
+                    );
+                })
                 .toList();
 
         Long nextCursor = null;
@@ -93,22 +102,23 @@ public class ChatService {
         return new ChatHistoryResponse(messages, slice.hasNext(), nextCursor);
     }
 
-    private String resolveImageUrl(ChatMessage m, Long viewerId, Map<Long, MissionStatus> statusByMissionId) {
+    private String resolveImageUrl(ChatMessage m, boolean shouldBlurForViewer) {
         String stored = m.getImageUrl();
         if (stored == null || stored.isBlank()) return null;
 
         if (stored.startsWith("http")) return stored;
 
-        boolean shouldBlurForViewer =
-                viewerId != null
-                        && m.getType() == ChatMessageType.MISSION_IMAGE
-                        && m.getSender() != null
-                        && m.getSender().getId() != null
-                        && !m.getSender().getId().equals(viewerId)
-                        && m.getMissionHistoryId() != null
-                        && statusByMissionId.get(m.getMissionHistoryId()) == MissionStatus.HALF_DONE;
-
         String keyToExpose = shouldBlurForViewer ? toBlurKey(stored) : stored;
         return s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
+    }
+
+    private boolean shouldBlurForViewer(ChatMessage m, Long viewerId, Map<Long, MissionStatus> statusByMissionId) {
+        return viewerId != null
+                && m.getType() == ChatMessageType.MISSION_IMAGE
+                && m.getSender() != null
+                && m.getSender().getId() != null
+                && !m.getSender().getId().equals(viewerId)
+                && m.getMissionHistoryId() != null
+                && statusByMissionId.get(m.getMissionHistoryId()) == MissionStatus.HALF_DONE;
     }
 }

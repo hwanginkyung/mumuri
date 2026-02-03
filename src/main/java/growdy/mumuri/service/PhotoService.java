@@ -32,6 +32,7 @@ public class PhotoService {
     private final S3Upload s3Upload;
     private final MemberRepository memberRepository;
     private final CoupleMissionRepository coupleMissionRepository;
+    private static final String BLUR_MESSAGE = "상대방이 보낸 사진을 보려면 먼저 같은 미션을 수행해야 해요.";
 
     private record MissionKey(LocalDate date, Long missionId) {}
     public String uploadPhoto(Long coupleId, MultipartFile file, Long userId, Long missionId) {
@@ -65,27 +66,75 @@ public class PhotoService {
     }
     /** 사진 한장  (presigned URL 반환) */
     @Transactional(readOnly = true)
-    public PhotoResponseDto getOne(Long coupleId, Long photoId) {
+    public PhotoResponseDto getOne(Long coupleId, Long photoId, Long viewerId) {
         Photo p = photoRepository.findByIdAndCoupleId(photoId, coupleId);
 
         if (p.isDeleted()) {
             throw new IllegalStateException("삭제된 사진입니다.");
         }
 
-        String url = s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10));
-        return new PhotoResponseDto(p.getId(), url, p.getUploadedBy(),p.getCreatedAt());
+        LocalDate missionDate = p.getCreatedAt().toLocalDate();
+        MissionStatus status = coupleMissionRepository
+                .findWithMissionByDates(coupleId, List.of(missionDate))
+                .stream()
+                .filter(cm -> Objects.equals(cm.getMission().getId(), p.getMissionId()))
+                .map(CoupleMission::getStatus)
+                .findFirst()
+                .orElse(null);
+
+        boolean shouldBlur = status == MissionStatus.HALF_DONE && !Objects.equals(p.getUploadedBy(), viewerId);
+
+        String keyToExpose = shouldBlur ? BlurKeyUtil.toBlurKey(p.getS3Key()) : p.getS3Key();
+        String url = s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
+        return new PhotoResponseDto(
+                p.getId(),
+                url,
+                p.getUploadedBy(),
+                p.getCreatedAt(),
+                shouldBlur,
+                shouldBlur ? BLUR_MESSAGE : null
+        );
     }
 
     /** 커플 앨범 목록 (presigned URL 포함) */
     @Transactional(readOnly = true)
-    public List<PhotoResponseDto> listByCouple(Long coupleId) {
-        return photoRepository.findByCoupleIdAndDeletedFalseOrderByIdDesc(coupleId).stream()
-                .map(p -> new PhotoResponseDto(
-                        p.getId(),
-                        s3Upload.presignedGetUrl(p.getS3Key(), Duration.ofMinutes(10)),
-                        p.getUploadedBy(),
-                        p.getCreatedAt()
-                ))
+    public List<PhotoResponseDto> listByCouple(Long coupleId, Long viewerId) {
+        List<Photo> photos = photoRepository.findByCoupleIdAndDeletedFalseOrderByIdDesc(coupleId);
+        Set<LocalDate> dates = photos.stream()
+                .map(p -> p.getCreatedAt().toLocalDate())
+                .collect(Collectors.toSet());
+
+        Map<MissionKey, MissionStatus> statusMap = coupleMissionRepository
+                .findWithMissionByDates(coupleId, new ArrayList<>(dates))
+                .stream()
+                .collect(Collectors.toMap(
+                        cm -> new MissionKey(cm.getMissionDate(), cm.getMission().getId()),
+                        CoupleMission::getStatus,
+                        (a, b) -> a
+                ));
+
+        return photos.stream()
+                .map(p -> {
+                    MissionStatus status = statusMap.get(new MissionKey(
+                            p.getCreatedAt().toLocalDate(),
+                            p.getMissionId()
+                    ));
+
+                    boolean shouldBlur = status == MissionStatus.HALF_DONE
+                            && !Objects.equals(p.getUploadedBy(), viewerId);
+
+                    String keyToExpose = shouldBlur ? BlurKeyUtil.toBlurKey(p.getS3Key()) : p.getS3Key();
+                    String url = s3Upload.presignedGetUrl(keyToExpose, Duration.ofMinutes(10));
+
+                    return new PhotoResponseDto(
+                            p.getId(),
+                            url,
+                            p.getUploadedBy(),
+                            p.getCreatedAt(),
+                            shouldBlur,
+                            shouldBlur ? BLUR_MESSAGE : null
+                    );
+                })
                 .toList();
     }
 
@@ -160,11 +209,12 @@ public class PhotoService {
                     nickname,
                     p.getCreatedAt(),
                     url,
-                    p.getDescription()
+                    p.getDescription(),
+                    shouldBlur,
+                    shouldBlur ? BLUR_MESSAGE : null
             );
         });
     }
 
 
 }
-

@@ -4,4 +4,11 @@ import growdy.mumuri.domain.ProgressStatus;
 
 import java.time.Instant;
 
-public record UserProgressDto(Long userId, ProgressStatus status, String photoUrl, Instant completedAt) {}
+public record UserProgressDto(
+        Long userId,
+        ProgressStatus status,
+        String photoUrl,
+        Instant completedAt,
+        boolean blurred,
+        String blurMessage
+) {}
