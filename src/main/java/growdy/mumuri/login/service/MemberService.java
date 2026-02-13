@@ -98,6 +98,11 @@ public class MemberService {
         return "AppleUser";
     }
 
+    @Transactional(readOnly = true)
+    public Optional<Member> findByEmail(String email) {
+        return memberRepository.findByEmail(email);
+    }
+
     /**
      * ✅ 커플 코드 생성 (없을 때만 호출하는 걸 추천)
      *    - "/user/couple/code" 에서만 사용
