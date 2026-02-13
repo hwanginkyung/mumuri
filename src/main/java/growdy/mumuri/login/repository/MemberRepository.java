@@ -11,5 +11,5 @@ import java.util.Optional;
         boolean existsByCoupleCode(String coupleCode);
         Optional<Member> findByKakaoId(Long kakaoId);
         Optional<Member> findByAppleId(String appleId);
+        Optional<Member> findByEmail(String email);
     }
-

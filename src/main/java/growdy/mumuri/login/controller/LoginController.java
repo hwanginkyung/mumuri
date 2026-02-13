@@ -46,6 +46,7 @@ import java.util.*;
 public class LoginController {
 
     private static final Logger log = LoggerFactory.getLogger(LoginController.class);
+    private static final String KAKAO_REVIEW_BYPASS_EMAIL = "cjy031212@gmail.com";
 
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
@@ -126,18 +127,33 @@ public class LoginController {
     // =========================
     @GetMapping("/api/auth/kakao/callback")
     public ResponseEntity<?> kakaoCallback(
-            @RequestParam String code,
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String reviewEmail,
             HttpServletRequest request
     ) throws JsonProcessingException {
 
-        String kakaoAccessToken = getKakaoAccessToken(code);
+        Member member;
 
-        String userInfoJson = getKakaoUserInfo(kakaoAccessToken);
-        JsonNode userInfoNode = objectMapper.readTree(userInfoJson);
-        KakaoUserInfo kakaoUser = KakaoUserInfo.from(userInfoNode);
+        if (KAKAO_REVIEW_BYPASS_EMAIL.equalsIgnoreCase(Optional.ofNullable(reviewEmail).orElse(""))) {
+            member = memberService.findByEmail(KAKAO_REVIEW_BYPASS_EMAIL)
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "리뷰용 테스트 계정을 찾을 수 없습니다."));
+            log.warn("Kakao auth-code verification skipped for review account: {}", KAKAO_REVIEW_BYPASS_EMAIL);
 
-        var result = memberService.registerIfAbsent(kakaoUser);
-        Member member = result.member();
+        } else {
+            if (code == null || code.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Kakao authorization code가 없습니다.");
+            }
+
+            String kakaoAccessToken = getKakaoAccessToken(code);
+
+            String userInfoJson = getKakaoUserInfo(kakaoAccessToken);
+            JsonNode userInfoNode = objectMapper.readTree(userInfoJson);
+            KakaoUserInfo kakaoUser = KakaoUserInfo.from(userInfoNode);
+
+            var result = memberService.registerIfAbsent(kakaoUser);
+            member = result.member();
+        }
+
         boolean isNew = member.getAnniversary() == null;
 
         Long roomId = findRoomId(member.getId());
