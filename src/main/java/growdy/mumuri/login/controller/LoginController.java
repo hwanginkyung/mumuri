@@ -46,7 +46,7 @@ import java.util.*;
 public class LoginController {
 
     private static final Logger log = LoggerFactory.getLogger(LoginController.class);
-    private static final String KAKAO_REVIEW_BYPASS_EMAIL = "cjy031212@gmail.com";
+    private static final String DEFAULT_KAKAO_REVIEW_BYPASS_EMAIL = "cjy031212@gmail.com";
 
     private final MemberService memberService;
     private final JwtUtil jwtUtil;
@@ -60,6 +60,9 @@ public class LoginController {
 
     @Value("${kakao.client-id}")
     private String kakaoClientId;
+
+    @Value("${kakao.review-bypass-email:cjy031212@gmail.com}")
+    private String kakaoReviewBypassEmail;
 
     @Value("${apple.client-id}")
     private String appleClientId;
@@ -94,7 +97,18 @@ public class LoginController {
     // RestController에서는 "redirect:" 문자열이 redirect가 아니라 BODY로 나가니까 ResponseEntity로 처리
     // =========================
     @GetMapping("/api/auth/kakao/login")
-    public ResponseEntity<Void> redirectToKakao() {
+    public ResponseEntity<Void> redirectToKakao(
+            @RequestParam(required = false) String reviewEmail
+    ) {
+        if (isReviewBypassEmail(reviewEmail)) {
+            URI bypassUri = UriComponentsBuilder
+                    .fromPath("/api/auth/kakao/callback")
+                    .queryParam("reviewEmail", kakaoReviewBypassEmail)
+                    .build(true)
+                    .toUri();
+            return ResponseEntity.status(HttpStatus.FOUND).location(bypassUri).build();
+        }
+
         String kakaoUrl = "https://kauth.kakao.com/oauth/authorize?response_type=code"
                 + "&client_id=" + kakaoClientId
                 + "&redirect_uri=" + URLEncoder.encode(kakaoRedirectUri, StandardCharsets.UTF_8);
@@ -134,10 +148,10 @@ public class LoginController {
 
         Member member;
 
-        if (KAKAO_REVIEW_BYPASS_EMAIL.equalsIgnoreCase(Optional.ofNullable(reviewEmail).orElse(""))) {
-            member = memberService.findByEmail(KAKAO_REVIEW_BYPASS_EMAIL)
+        if (isReviewBypassEmail(reviewEmail)) {
+            member = memberService.findByEmail(kakaoReviewBypassEmail)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "리뷰용 테스트 계정을 찾을 수 없습니다."));
-            log.warn("Kakao auth-code verification skipped for review account: {}", KAKAO_REVIEW_BYPASS_EMAIL);
+            log.warn("Kakao auth-code verification skipped for review account: {}", kakaoReviewBypassEmail);
 
         } else {
             if (code == null || code.isBlank()) {
@@ -178,6 +192,19 @@ public class LoginController {
         // ✅ 브라우저/웹뷰 플로우면 딥링크로 302
         URI deeplink = buildDeeplink("kakao", payload);
         return ResponseEntity.status(HttpStatus.FOUND).location(deeplink).build();
+    }
+
+    private boolean isReviewBypassEmail(String reviewEmail) {
+        String candidate = Optional.ofNullable(reviewEmail).orElse("").trim();
+        if (candidate.isEmpty()) {
+            return false;
+        }
+
+        String configuredEmail = Optional.ofNullable(kakaoReviewBypassEmail)
+                .filter(value -> !value.isBlank())
+                .orElse(DEFAULT_KAKAO_REVIEW_BYPASS_EMAIL);
+
+        return configuredEmail.equalsIgnoreCase(candidate);
     }
 
     // =========================
