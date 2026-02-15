@@ -36,6 +36,7 @@ jwt:
 kakao:
   client-id: ${KAKAO_CLIENT_ID}
   redirect-uri: ${KAKAO_REDIRECT_URI}
+  review-bypass-email: ${KAKAO_REVIEW_BYPASS_EMAIL:cjy031212@gmail.com}
 
 apple:
   client-id: ${APPLE_CLIENT_ID}
